@@ -1,0 +1,2419 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>广禾建筑材料数字目录系统</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#1d4ed8',
+                        secondary: '#0ea5e9',
+                        accent: '#0d9488'
+                    },
+                    fontFamily: {
+                        'sans': ['Inter', 'Noto Sans SC', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* 材料卡片图片容器 */
+        .material-card .material-image-container {
+            position: relative;
+            height: 200px;
+            overflow: hidden;
+        }
+        
+        .material-card .material-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+        
+        .material-card .no-image {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f3f4f6;
+            color: #9ca3af;
+            font-size: 3rem;
+        }
+        
+        .material-card:hover .material-image {
+            transform: scale(1.05);
+        }
+        
+        /* 详情弹窗中的轮播图 */
+        .carousel-container {
+            position: relative;
+            height: 400px;
+            overflow: hidden;
+            border-radius: 0.5rem;
+            background-color: #f3f4f6;
+        }
+        
+        .carousel-slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+        
+        .carousel-slide.active {
+            opacity: 1;
+        }
+        
+        .carousel-slide img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .carousel-prev, .carousel-next {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 40px;
+            height: 40px;
+            background-color: rgba(255,255,255,0.7);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 10;
+            transition: background-color 0.3s;
+        }
+        
+        .carousel-prev:hover, .carousel-next:hover {
+            background-color: white;
+        }
+        
+        .carousel-prev {
+            left: 15px;
+        }
+        
+        .carousel-next {
+            right: 15px;
+        }
+        
+        .carousel-controls {
+            position: absolute;
+            bottom: 15px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            z-index: 10;
+        }
+        
+        .carousel-dots {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .carousel-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: rgba(255,255,255,0.5);
+            cursor: pointer;
+        }
+        
+        .carousel-dot.active {
+            background-color: white;
+        }
+        
+        /* 技术文档链接 */
+        .pdf-link {
+            display: inline-flex;
+            align-items: center;
+            color: #ef4444;
+            margin-top: 4px;
+        }
+        
+        .pdf-link i {
+            margin-right: 6px;
+        }
+        
+        /* 上传图片预览 */
+        .uploaded-images {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .image-preview-item {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .image-preview-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .delete-image-btn {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 20px;
+            height: 20px;
+            background-color: rgba(255,255,255,0.8);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 10px;
+            color: #ef4444;
+        }
+        
+        /* 通知动画 */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes fadeOut {
+            from { opacity: 1; transform: translateY(0); }
+            to { opacity: 0; transform: translateY(20px); }
+        }
+        
+        .animate-fadeIn {
+            animation: fadeIn 0.3s ease forwards;
+        }
+        
+        .animate-fadeOut {
+            animation: fadeOut 0.3s ease forwards;
+        }
+        
+        /* 材料分类徽章 */
+        .category-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        
+        /* 技术参数表格样式 */
+        .tech-specs-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        .tech-specs-table th, 
+        .tech-specs-table td {
+            border: 1px solid #e2e8f0;
+            padding: 0.75rem;
+            text-align: left;
+        }
+        .tech-specs-table th {
+            background-color: #f8fafc;
+            font-weight: 600;
+        }
+        .tech-specs-table tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+        .spec-category {
+            background-color: #e0f2fe;
+            font-weight: 600;
+        }
+        .spec-value {
+            font-weight: 500;
+        }
+        .spec-unit {
+            color: #64748b;
+            font-size: 0.875rem;
+        }
+        .standard-badge {
+            display: inline-block;
+            background-color: #dcfce7;
+            color: #166534;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            margin-top: 0.25rem;
+        }
+        
+        /* 修复模态框滚动问题 */
+        .modal-content {
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        /* 详情弹窗操作按钮 */
+        .detail-actions {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .detail-edit-btn {
+            background-color: #3b82f6;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 14px;
+        }
+        
+        .detail-delete-btn {
+            background-color: #ef4444;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 14px;
+        }
+        
+        /* 技术参数编辑区域 */
+        .tech-specs-edit {
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            padding: 1.25rem;
+            margin-top: 1rem;
+            background-color: #f8fafc;
+        }
+        
+        .tech-specs-edit-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .tech-specs-edit-form {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.75rem;
+        }
+        
+        .tech-specs-edit-form .full-row {
+            grid-column: 1 / -1;
+        }
+        
+        .tech-specs-buttons {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        
+        /* 技术参数表格操作按钮 */
+        .spec-action-btn {
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            cursor: pointer;
+        }
+        
+        .edit-spec-btn {
+            background-color: #dbeafe;
+            color: #1d4ed8;
+        }
+        
+        .delete-spec-btn {
+            background-color: #fee2e2;
+            color: #ef4444;
+        }
+        
+        /* 添加技术参数按钮 */
+        .add-spec-btn {
+            background-color: #dcfce7;
+            color: #166534;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            margin-top: 0.5rem;
+            font-weight: 500;
+        }
+        
+        /* 技术参数编辑表格 */
+        .tech-specs-edit-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .tech-specs-edit-table th,
+        .tech-specs-edit-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .tech-specs-edit-table th {
+            background-color: #f1f5f9;
+            font-weight: 600;
+        }
+        
+        .tech-specs-edit-table tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+        
+        /* 修复：阻止事件冒泡 */
+        .spec-action-btn {
+            pointer-events: auto;
+        }
+        
+        /* 编辑表单高亮 */
+        .editing-spec {
+            background-color: #dbeafe !important;
+        }
+    </style>
+</head>
+<body class="font-sans text-gray-800 bg-gray-50">
+    <!-- 顶部导航 -->
+    <header class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-3 flex flex-col md:flex-row justify-between items-center">
+            <div class="flex items-center space-x-2 mb-4 md:mb-0">
+                <div class="bg-primary p-2 rounded-lg">
+                    <i class="fas fa-building text-white text-xl"></i>
+                </div>
+                <h1 class="text-xl md:text-2xl font-bold text-gray-800">广禾建筑材料数字目录系统</h1>
+            </div>
+            <div class="flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-4 w-full md:w-auto">
+                <div class="relative w-full md:w-64">
+                    <input type="text" id="searchInput" placeholder="搜索材料..." class="search-input w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:border-primary">
+                    <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button class="bg-primary hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+                        <i class="fas fa-user"></i>
+                        <span class="hidden md:inline">登录</span>
+                    </button>
+                    <button class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+                        <i class="fas fa-download"></i>
+                        <span class="hidden md:inline">导出数据</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="container mx-auto px-4 py-6">
+        <!-- 项目选择 -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+            <div class="mb-4 md:mb-0">
+                <h2 class="text-2xl md:text-3xl font-bold text-gray-900">项目材料目录</h2>
+                <p class="text-gray-600">从屋面到基础工程的全材料清单管理</p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <div class="relative">
+                    <select id="projectSelect" class="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-10 focus:outline-none focus:border-primary">
+                        <option>教堂项目</option>
+                        <option selected>海滨别墅项目</option>
+                        <option>小型住宅项目</option>
+                        <option>商业中心项目</option>
+                    </select>
+                    <i class="fas fa-chevron-down absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500"></i>
+                </div>
+                <button id="newProjectBtn" class="bg-primary hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+                    <i class="fas fa-plus"></i>
+                    <span>新建项目</span>
+                </button>
+                <button id="manageProjectBtn" class="bg-accent hover:bg-teal-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+                    <i class="fas fa-cog"></i>
+                    <span>管理项目</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- 材料分类选项卡 -->
+        <div class="bg-white rounded-xl shadow-md p-4 mb-6">
+            <div class="border-b border-gray-200">
+                <nav class="flex overflow-x-auto pb-1 space-x-4">
+                    <button class="tab-button py-3 px-1 font-medium text-gray-600 whitespace-nowrap active" data-category="all">全部材料</button>
+                    <button class="tab-button py-3 px-1 font-medium text-gray-600 whitespace-nowrap" data-category="roof">屋面系统</button>
+                    <button class="tab-button py-3 px-1 font-medium text-gray-600 whitespace-nowrap" data-category="wall">外墙系统</button>
+                    <button class="tab-button py-3 px-1 font-medium text-gray-600 whitespace-nowrap" data-category="window">门窗系统</button>
+                    <button class="tab-button py-3 px-1 font-medium text-gray-600 whitespace-nowrap" data-category="structure">主体结构</button>
+                    <button class="tab-button py-3 px-1 font-medium text-gray-600 whitespace-nowrap" data-category="interior">室内装修</button>
+                    <button class="tab-button py-3 px-1 font-medium text-gray-600 whitespace-nowrap" data-category="equipment">设备系统</button>
+                    <button class="tab-button py-3 px-1 font-medium text-gray-600 whitespace-nowrap" data-category="foundation">基础工程</button>
+                </nav>
+            </div>
+        </div>
+
+        <!-- 材料操作区 -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+            <div class="text-sm text-gray-600 mb-2 md:mb-0">
+                显示 <span id="materialCount" class="font-bold">8</span> 种材料中的 <span class="font-bold">8</span> 种
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <div class="flex items-center space-x-2">
+                    <span class="text-gray-700 hidden md:inline">排序：</span>
+                    <select id="sortSelect" class="bg-white border border-gray-300 rounded-lg px-3 py-1 focus:outline-none focus:border-primary">
+                        <option value="default">默认排序</option>
+                        <option value="price-asc">价格从低到高</option>
+                        <option value="price-desc">价格从高到低</option>
+                        <option value="name-asc">名称 A-Z</option>
+                        <option value="name-desc">名称 Z-A</option>
+                    </select>
+                </div>
+                <button id="addMaterialBtn" class="bg-primary hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+                    <i class="fas fa-plus"></i>
+                    <span>添加材料</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- 材料网格 -->
+        <div id="materialsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+            <!-- 材料卡片将通过JavaScript动态生成 -->
+        </div>
+
+        <!-- 文件下载区 -->
+        <div class="bg-white rounded-xl shadow-md p-6 mb-8">
+            <h3 class="text-xl font-bold text-gray-900 mb-4">项目文件下载</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="file-card border border-gray-200 rounded-lg p-4 flex justify-between items-center" id="budgetFileCard">
+                    <div>
+                        <h4 class="font-semibold text-gray-800" id="budgetFileName">海滨别墅预算表</h4>
+                        <p class="text-sm text-gray-600">包含所有材料成本及预算分配</p>
+                        <div class="flex items-center mt-2 text-sm text-gray-500">
+                            <i class="fas fa-file-excel text-green-600 mr-2"></i>
+                            <span>Excel 表格 · 更新于 <span id="budgetUpdateDate">2023-08-10</span></span>
+                        </div>
+                    </div>
+                    <button class="download-budget-btn bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+                        <i class="fas fa-download"></i>
+                        <span>下载</span>
+                    </button>
+                </div>
+                <div class="file-card border border-gray-200 rounded-lg p-4 flex justify-between items-center">
+                    <div>
+                        <h4 class="font-semibold text-gray-800">材料技术参数手册</h4>
+                        <p class="text-sm text-gray-600">所有材料详细技术规格及参数</p>
+                        <div class="flex items-center mt-2 text-sm text-gray-500">
+                            <i class="fas fa-file-pdf text-red-600 mr-2"></i>
+                            <span>PDF 文档 · 更新于 <span id="specsManualUpdateDate">2023-08-05</span></span>
+                        </div>
+                    </div>
+                    <button id="downloadSpecsManualBtn" class="bg-primary hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+                        <i class="fas fa-download"></i>
+                        <span>下载</span>
+                    </button>
+                </div>
+                <div class="file-card border border-gray-200 rounded-lg p-4 flex justify-between items-center">
+                    <div>
+                        <h4 class="font-semibold text-gray-800">材料采购清单</h4>
+                        <p class="text-sm text-gray-600">按供应商分类的采购订单</p>
+                        <div class="flex items-center mt-2 text-sm text-gray-500">
+                            <i class="fas fa-file-word text-blue-600 mr-2"></i>
+                            <span>Word 文档 · 更新于 2023-08-08</span>
+                        </div>
+                    </div>
+                    <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+                        <i class="fas fa-download"></i>
+                        <span>下载</span>
+                    </button>
+                </div>
+                <div class="file-card border border-gray-200 rounded-lg p-4 flex justify-between items-center">
+                    <div>
+                        <h4 class="font-semibold text-gray-800">施工进度计划</h4>
+                        <p class="text-sm text-gray-600">材料交付与施工时间表</p>
+                        <div class="flex items-center mt-2 text-sm text-gray-500">
+                            <i class="fas fa-file-alt text-purple-600 mr-2"></i>
+                            <span>PDF 文档 · 更新于 2023-08-01</span>
+                        </div>
+                    </div>
+                    <button class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+                        <i class="fas fa-download"></i>
+                        <span>下载</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加/编辑材料模态框 -->
+    <div id="materialModal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl modal-content">
+            <div class="p-6 border-b border-gray-200">
+                <h3 class="text-xl font-bold text-gray-900" id="modalTitle">添加新材料</h3>
+            </div>
+            <div class="p-6 modal-form-content">
+                <form id="materialForm">
+                    <div class="mb-4">
+                        <label class="block text-gray-700 text-sm font-medium mb-2">材料名称 *</label>
+                        <input type="text" id="materialName" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary" required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-gray-700 text-sm font-medium mb-2">材料分类 *</label>
+                        <select id="materialCategory" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary" required>
+                            <option value="">选择分类</option>
+                            <option value="roof">屋面系统</option>
+                            <option value="wall">外墙系统</option>
+                            <option value="window">门窗系统</option>
+                            <option value="structure">主体结构</option>
+                            <option value="interior">室内装修</option>
+                            <option value="equipment">设备系统</option>
+                            <option value="foundation">基础工程</option>
+                        </select>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-gray-700 text-sm font-medium mb-2">规格参数 *</label>
+                        <input type="text" id="materialSpec" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary" required>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-gray-700 text-sm font-medium mb-2">单价 (¥) *</label>
+                            <input type="number" id="materialPrice" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary" required>
+                        </div>
+                        <div>
+                            <label class="block text-gray-700 text-sm font-medium mb-2">库存数量</label>
+                            <input type="number" id="materialStock" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-gray-700 text-sm font-medium mb-2">单位 *</label>
+                            <select id="materialUnit" class="unit-select w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary" required>
+                                <option value="">选择单位</option>
+                                <option value="㎡">平方米 (㎡)</option>
+                                <option value="张">张</option>
+                                <option value="根">根</option>
+                                <option value="米">米 (m)</option>
+                                <option value="吨">吨 (t)</option>
+                                <option value="立方米">立方米 (m³)</option>
+                                <option value="套">套</option>
+                                <option value="件">件</option>
+                                <option value="块">块</option>
+                                <option value="卷">卷</option>
+                                <option value="台">台</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-gray-700 text-sm font-medium mb-2">自定义单位</label>
+                            <input type="text" id="customUnit" placeholder="输入其他单位" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary">
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-gray-700 text-sm font-medium mb-2">材料描述</label>
+                        <textarea rows="3" id="materialDesc" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary"></textarea>
+                    </div>
+                    <div class="mb-6">
+                        <label class="block text-gray-700 text-sm font-medium mb-2">材料图片</label>
+                        <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer" id="uploadArea">
+                            <i class="fas fa-cloud-upload-alt text-3xl text-gray-400 mb-2"></i>
+                            <p class="text-gray-500">点击或拖放图片上传</p>
+                            <input type="file" id="materialImage" class="hidden" accept="image/*" multiple>
+                        </div>
+                        
+                        <div class="uploaded-images" id="uploadedImages">
+                            <!-- 上传的图片预览将在这里显示 -->
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-gray-700 text-sm font-medium mb-2">技术文档链接</label>
+                        <input type="url" id="materialPdf" placeholder="https://example.com/material-spec.pdf" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary">
+                    </div>
+                    
+                    <!-- 技术参数编辑区域 -->
+                    <div class="tech-specs-edit">
+                        <div class="tech-specs-edit-header">
+                            <h4 class="text-lg font-semibold text-gray-900">技术参数</h4>
+                            <button type="button" id="addTechSpecBtn" class="add-spec-btn">
+                                <i class="fas fa-plus"></i>
+                                <span>添加技术参数</span>
+                            </button>
+                        </div>
+                        
+                        <div class="overflow-x-auto mt-4">
+                            <table class="tech-specs-edit-table">
+                                <thead>
+                                    <tr>
+                                        <th>参数类别</th>
+                                        <th>参数名称</th>
+                                        <th>参数值</th>
+                                        <th>单位</th>
+                                        <th>标准</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="techSpecsTableBody">
+                                    <!-- 技术参数行将通过JavaScript动态生成 -->
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div id="techSpecForm" class="hidden mt-4 bg-white p-4 rounded-lg border border-gray-200">
+                            <h5 class="text-md font-medium text-gray-900 mb-3">编辑技术参数</h5>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-gray-700 text-sm font-medium mb-1">参数类别</label>
+                                    <input type="text" id="techSpecCategory" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                                </div>
+                                <div>
+                                    <label class="block text-gray-700 text-sm font-medium mb-1">参数名称</label>
+                                    <input type="text" id="techSpecName" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                                </div>
+                                <div>
+                                    <label class="block text-gray-700 text-sm font-medium mb-1">参数值</label>
+                                    <input type="text" id="techSpecValue" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                                </div>
+                                <div>
+                                    <label class="block text-gray-700 text-sm font-medium mb-1">单位</label>
+                                    <input type="text" id="techSpecUnit" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="block text-gray-700 text-sm font-medium mb-1">标准</label>
+                                    <input type="text" id="techSpecStandard" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                                </div>
+                            </div>
+                            <div class="tech-specs-buttons">
+                                <button type="button" id="cancelTechSpecBtn" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700">取消</button>
+                                <button type="button" id="saveTechSpecBtn" class="px-4 py-2 bg-primary text-white rounded-lg">保存参数</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <input type="hidden" id="editMaterialId" value="">
+                    <input type="hidden" id="editTechSpecIndex" value="-1">
+                </form>
+            </div>
+            <div class="flex justify-end p-6 bg-gray-50 rounded-b-xl space-x-3 modal-buttons">
+                <button id="cancelModalBtn" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100">取消</button>
+                <button id="saveMaterialBtn" class="px-4 py-2 bg-primary hover:bg-blue-700 text-white rounded-lg">保存材料</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 新建项目模态框 -->
+    <div id="projectModal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md modal-content">
+            <div class="p-6 border-b border-gray-200">
+                <h3 class="text-xl font-bold text-gray-900">新建项目</h3>
+            </div>
+            <div class="p-6 modal-form-content">
+                <form id="projectForm">
+                    <div class="mb-4">
+                        <label class="block text-gray-700 text-sm font-medium mb-2">项目名称 *</label>
+                        <input type="text" id="projectName" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary" required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-gray-700 text-sm font-medium mb-2">项目描述</label>
+                        <textarea rows="3" id="projectDescription" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary"></textarea>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-gray-700 text-sm font-medium mb-2">项目负责人 *</label>
+                        <input type="text" id="projectManager" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary" required>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-gray-700 text-sm font-medium mb-2">开始日期</label>
+                            <input type="date" id="projectStartDate" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary">
+                        </div>
+                        <div>
+                            <label class="block text-gray-700 text-sm font-medium mb-2">结束日期</label>
+                            <input type="date" id="projectEndDate" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary">
+                        </div>
+                    </div>
+                    <div class="mb-6">
+                        <label class="block text-gray-700 text-sm font-medium mb-2">项目类型</label>
+                        <select id="projectType" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary">
+                            <option value="residential">住宅项目</option>
+                            <option value="commercial">商业项目</option>
+                            <option value="public">公共建筑</option>
+                            <option value="renovation">改造项目</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="flex justify-end p-6 bg-gray-50 rounded-b-xl space-x-3 modal-buttons">
+                <button id="cancelProjectBtn" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100">取消</button>
+                <button id="saveProjectBtn" class="px-4 py-2 bg-primary hover:bg-blue-700 text-white rounded-lg">创建项目</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 管理项目模态框 -->
+    <div id="manageProjectModal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl modal-content">
+            <div class="p-6 border-b border-gray-200">
+                <h3 class="text-xl font-bold text-gray-900">管理项目材料</h3>
+                <p class="text-gray-600 mt-1" id="currentProjectName">海滨别墅项目</p>
+            </div>
+            <div class="p-6 modal-form-content">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
+                    <div class="mb-2 md:mb-0">
+                        <h4 class="text-lg font-semibold">项目材料清单</h4>
+                        <p class="text-sm text-gray-600">管理当前项目使用的材料及数量</p>
+                    </div>
+                    <button id="addMaterialToProjectBtn" class="bg-primary hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 mt-2 md:mt-0">
+                        <i class="fas fa-plus"></i>
+                        <span>添加材料</span>
+                    </button>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full project-materials-table">
+                        <thead>
+                            <tr>
+                                <th>材料名称</th>
+                                <th>规格</th>
+                                <th>分类</th>
+                                <th>单价</th>
+                                <th>数量</th>
+                                <th>小计</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="projectMaterialsList">
+                            <!-- 项目材料将通过JavaScript动态生成 -->
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="5" class="text-right font-semibold">总预算：</td>
+                                <td colspan="2" class="font-bold text-primary text-lg" id="projectTotalBudget">¥0.00</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                
+                <div class="mt-8">
+                    <h4 class="text-lg font-semibold mb-4">添加材料到项目</h4>
+                    <div class="flex flex-col md:flex-row gap-4">
+                        <div class="flex-1">
+                            <label class="block text-gray-700 text-sm font-medium mb-2">选择材料</label>
+                            <select id="addMaterialSelect" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary">
+                                <option value="">请选择材料</option>
+                                <!-- 材料选项将通过JavaScript动态生成 -->
+                            </select>
+                        </div>
+                        <div class="w-full md:w-32">
+                            <label class="block text-gray-700 text-sm font-medium mb-2">数量</label>
+                            <input type="number" id="materialQuantity" min="1" value="1" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary">
+                        </div>
+                        <div class="self-end">
+                            <button id="confirmAddMaterialBtn" class="w-full px-4 py-2 bg-primary hover:bg-blue-700 text-white rounded-lg">
+                                添加
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="flex flex-col md:flex-row justify-end p-6 bg-gray-50 rounded-b-xl space-y-3 md:space-y-0 md:space-x-3 modal-buttons">
+                <button id="closeManageProjectBtn" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100">关闭</button>
+                <button id="updateProjectBtn" class="px-4 py-2 bg-primary hover:bg-blue-700 text-white rounded-lg">保存更改</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 底部信息 -->
+    <footer class="bg-white border-t border-gray-200 py-8">
+        <div class="container mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <div>
+                    <h4 class="text-lg font-semibold mb-4">建筑材料目录</h4>
+                    <p class="text-gray-600">专业建筑材料的数字化管理平台，帮助您高效管理从屋面到基础工程的所有材料。</p>
+                    <div class="flex space-x-3 mt-4">
+                        <a href="#" class="text-gray-400 hover:text-primary"><i class="fab fa-weixin text-xl"></i></a>
+                        <a href="#" class="text-gray-400 hover:text-primary"><i class="fab fa-weibo text-xl"></i></a>
+                        <a href="#" class="text-gray-400 hover:text-primary"><i class="fab fa-linkedin-in text-xl"></i></a>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="text-lg font-semibold mb-4">分类导航</h4>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="text-gray-600 hover:text-primary">屋面系统</a></li>
+                        <li><a href="#" class="text-gray-600 hover:text-primary">外墙系统</a></li>
+                        <li><a href="#" class="text-gray-600 hover:text-primary">门窗系统</a></li>
+                        <li><a href="#" class="text-gray-600 hover:text-primary">主体结构</a></li>
+                        <li><a href="#" class="text-gray-600 hover:text-primary">室内装修</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-lg font-semibold mb-4">相关资源</h4>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="text-gray-600 hover:text-primary">材料技术规范</a></li>
+                        <li><a href="#" class="text-gray-600 hover:text-primary">安装指南</a></li>
+                        <li><a href="#" class="text-gray-600 hover:text-primary">维护手册</a></li>
+                        <li><a href="#" class="text-gray-600 hover:text-primary">供应商名录</a></li>
+                        <li><a href="#" class="text-gray-600 hover:text-primary">行业标准</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-lg font-semibold mb-4">联系我们</h4>
+                    <ul class="space-y-2">
+                        <li class="flex items-center space-x-2 text-gray-600">
+                            <i class="fas fa-envelope"></i>
+                            <span>muzi8_28@163.COM</span>
+                        </li>
+                        <li class="flex items-center space-x-2 text-gray-600">
+                            <i class="fas fa-phone"></i>
+                            <span>+86 13543733180</span>
+                        </li>
+                        <li class="flex items-center space-x-2 text-gray-600">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <span>广东省佛山市南海区丹灶镇冠金产业园</span>
+                        </li>
+                        <li class="flex items-center space-x-2 text-gray-600">
+                            <i class="fas fa-clock"></i>
+                            <span>周一至周五 9:00-18:00</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-gray-200 mt-8 pt-6 text-center text-gray-500">
+                <p>© 2025广禾建筑材料数字目录系统. 保留所有权利. | 沪ICP备12345678号</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // 材料数据（模拟数据库）- 补充完整技术参数
+        let materials = [
+            {
+                id: 1,
+                name: "立边咬合铝镁锰板",
+                category: "roof",
+                spec: "厚度0.9mm，氟碳喷涂",
+                price: 185,
+                stock: 1200,
+                unit: "㎡",
+                desc: "用于屋顶与墙面，防水性与耐候性极佳，抗盐雾3000小时以上。",
+                images: [
+                    "https://images.unsplash.com/photo-1593696140826-c58b021acf8b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=600&q=80",
+                    "https://images.unsplash.com/photo-1593697821091-9c1d9d1c5c8f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=600&q=80",
+                    "https://images.unsplash.com/photo-1560518883-ce09059eeffa?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=600&q=80"
+                ],
+                pdfUrl: "https://example.com/specs/aluminum-magnesium-manganese.pdf",
+                techSpecs: [
+                    { category: "基本参数", name: "材质成分", value: "Al-Mg-Mn合金", unit: "", standard: "GB/T 3880-2012" },
+                    { category: "基本参数", name: "厚度", value: "0.7-1.2", unit: "mm", standard: "GB/T 3880-2012" },
+                    { category: "基本参数", name: "宽度", value: "300-600", unit: "mm", standard: "GB/T 3880-2012" },
+                    { category: "物理性能", name: "抗拉强度", value: "≥265", unit: "MPa", standard: "GB/T 228.1-2010" },
+                    { category: "物理性能", name: "屈服强度", value: "≥215", unit: "MPa", standard: "GB/T 228.1-2010" },
+                    { category: "物理性能", name: "延伸率", value: "≥12", unit: "%", standard: "GB/T 228.1-2010" },
+                    { category: "耐候性能", name: "耐盐雾性", value: "≥3000", unit: "小时", standard: "GB/T 10125-2012" },
+                    { category: "耐候性能", name: "耐人工气候老化", value: "≥25", unit: "年", standard: "GB/T 1865-2009" },
+                    { category: "安装要求", name: "固定方式", value: "立边咬合", unit: "", standard: "JGJ 155-2013" },
+                    { category: "安装要求", name: "最小弯曲半径", value: "0.5", unit: "m", standard: "JGJ 155-2013" }
+                ]
+            },
+            {
+                id: 2,
+                name: "仿木纹水泥纤维板",
+                category: "wall",
+                spec: "2440×1220×8mm",
+                price: 95,
+                stock: 350,
+                unit: "张",
+                desc: "用于山墙两侧，兼具木材质感与水泥板的耐久性，防火等级A1。",
+                images: [
+                    "https://images.unsplash.com/photo-1517646287270-a5a9ca602e5c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=600&q=80",
+                    "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=600&q=80"
+                ],
+                pdfUrl: "https://example.com/specs/cement-fiber-board.pdf",
+                techSpecs: [
+                    { category: "基本参数", name: "规格尺寸", value: "2440×1220×8", unit: "mm", standard: "GB/T 7019-2014" },
+                    { category: "基本参数", name: "密度", value: "≥1.5", unit: "g/cm³", standard: "GB/T 7019-2014" },
+                    { category: "物理性能", name: "抗折强度", value: "≥15", unit: "MPa", standard: "GB/T 7019-2014" },
+                    { category: "物理性能", name: "抗冲击强度", value: "≥2.5", unit: "kJ/m²", standard: "GB/T 9966.1-2001" },
+                    { category: "防火性能", name: "燃烧性能等级", value: "A1级", unit: "", standard: "GB 8624-2012" },
+                    { category: "防火性能", name: "耐火极限", value: "≥2", unit: "小时", standard: "GB/T 9978.1-2008" },
+                    { category: "耐候性能", name: "耐冻融性", value: "25次循环无变化", unit: "", standard: "GB/T 9268-2008" },
+                    { category: "耐候性能", name: "耐人工气候老化", value: "≥15", unit: "年", standard: "GB/T 1865-2009" },
+                    { category: "环保性能", name: "甲醛释放量", value: "≤0.1", unit: "mg/m³", standard: "GB 18580-2017" },
+                    { category: "环保性能", name: "放射性核素", value: "A类", unit: "", standard: "GB 6566-2010" }
+                ]
+            },
+            {
+                id: 3,
+                name: "断桥铝合金系统窗",
+                category: "window",
+                spec: "1900×1750mm / 2400×1750mm",
+                price: 680,
+                stock: 0,
+                unit: "㎡",
+                desc: "型材壁厚2.0mm，水密性6级，抗风压9级，三腔体设计（K值≤2.0）。",
+                images: [
+                    "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=600&q=80",
+                    "https://images.unsplash.com/photo-1596726895380-2b295adf7206?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=600&q=80"
+                ],
+                pdfUrl: "https://example.com/specs/aluminum-windows.pdf",
+                techSpecs: [
+                    { category: "型材参数", name: "型材壁厚", value: "≥2.0", unit: "mm", standard: "GB/T 5237-2017" },
+                    { category: "型材参数", name: "隔热条宽度", value: "24-34", unit: "mm", standard: "GB/T 23615.1-2017" },
+                    { category: "物理性能", name: "抗风压性能", value: "9级", unit: "", standard: "GB/T 7106-2008" },
+                    { category: "物理性能", name: "水密性能", value: "6级", unit: "", standard: "GB/T 7106-2008" },
+                    { category: "物理性能", name: "气密性能", value: "8级", unit: "", standard: "GB/T 7106-2008" },
+                    { category: "热工性能", name: "传热系数K值", value: "≤2.0", unit: "W/(m²·K)", standard: "GB/T 8484-2008" },
+                    { category: "热工性能", name: "遮阳系数SC", value: "0.3-0.5", unit: "", standard: "GB/T 2680-1994" },
+                    { category: "声学性能", name: "隔声量", value: "≥35", unit: "dB", standard: "GB/T 8485-2008" },
+                    { category: "五金配件", name: "启闭次数", value: "≥100000", unit: "次", standard: "JG/T 212-2007" },
+                    { category: "五金配件", name: "承重能力", value: "≥130", unit: "kg", standard: "JG/T 212-2007" }
+                ]
+            },
+            {
+                id: 4,
+                name: "OSB定向结构板",
+                category: "structure",
+                spec: "2440×1220×18mm",
+                price: 220,
+                stock: 420,
+                unit: "张",
+                desc: "用于外墙与屋面结构，提供优良的结构支撑力，环保无甲醛。",
+                images: [
+                    "https://images.unsplash.com/photo-1596726895380-2b295adf7206?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=600&q=80",
+                    "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=600&q=80"
+                ],
+                pdfUrl: "https://example.com/specs/osb-board.pdf",
+                techSpecs: [
+                    { category: "基本参数", name: "规格尺寸", value: "2440×1220×18", unit: "mm", standard: "GB/T 4897-2015" },
+                    { category: "基本参数", name: "密度", value: "650±50", unit: "kg/m³", standard: "GB/T 17657-2013" },
+                    { category: "力学性能", name: "静曲强度", value: "≥35", unit: "MPa", standard: "GB/T 17657-2013" },
+                    { category: "力学性能", name: "弹性模量", value: "≥5500", unit: "MPa", standard: "GB/T 17657-2013" },
+                    { category: "力学性能", name: "内结合强度", value: "≥0.45", unit: "MPa", standard: "GB/T 17657-2013" },
+                    { category: "防潮性能", name: "24h吸水厚度膨胀率", value: "≤12", unit: "%", standard: "GB/T 17657-2013" },
+                    { category: "环保性能", name: "甲醛释放量", value: "≤0.1", unit: "mg/m³", standard: "GB 18580-2017" },
+                    { category: "防火性能", name: "燃烧性能等级", value: "B1级", unit: "", standard: "GB 8624-2012" },
+                    { category: "加工性能", name: "握钉力", value: "≥1200", unit: "N", standard: "GB/T 17657-2013" },
+                    { category: "加工性能", name: "螺钉保持力", value: "≥1000", unit: "N", standard: "GB/T 17657-2013" }
+                ]
+            },
+            {
+                id: 5,
+                name: "竹木纤维集成墙板",
+                category: "interior",
+                spec: "300×3000×9mm",
+                price: 65,
+                stock: 850,
+                unit: "㎡",
+                desc: "用于大厅、餐厅吊顶，环保且具温润质感，安装便捷。",
+                images: [
+                    "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=600&q=80"
+                ],
+                pdfUrl: "https://example.com/specs/bamboo-wall-panel.pdf",
+                techSpecs: [
+                    { category: "基本参数", name: "规格尺寸", value: "300×3000×9", unit: "mm", standard: "GB/T 20240-2017" },
+                    { category: "基本参数", name: "密度", value: "1.1-1.3", unit: "g/cm³", standard: "GB/T 17657-2013" },
+                    { category: "物理性能", name: "静曲强度", value: "≥35", unit: "MPa", standard: "GB/T 17657-2013" },
+                    { category: "物理性能", name: "弹性模量", value: "≥6000", unit: "MPa", standard: "GB/T 17657-2013" },
+                    { category: "物理性能", name: "表面耐磨性", value: "≥4000", unit: "转", standard: "GB/T 18102-2007" },
+                    { category: "环保性能", name: "甲醛释放量", value: "≤0.03", unit: "mg/m³", standard: "GB 18580-2017" },
+                    { category: "环保性能", name: "TVOC释放量", value: "≤0.05", unit: "mg/m³", standard: "GB 18580-2017" },
+                    { category: "防火性能", name: "燃烧性能等级", value: "B1级", unit: "", standard: "GB 8624-2012" },
+                    { category: "耐候性能", name: "耐光色牢度", value: "≥7级", unit: "", standard: "GB/T 8427-2008" },
+                    { category: "耐候性能", name: "耐湿热性", value: "无开裂、鼓泡", unit: "", standard: "GB/T 17657-2013" }
+                ]
+            },
+            {
+                id: 6,
+                name: "外墙保温板",
+                category: "wall",
+                spec: "1200×600×50mm",
+                price: 85,
+                stock: 1200,
+                unit: "块",
+                desc: "防潮防水及耐高温板，导热系数低，保温效果优异，防火等级81级。",
+                images: [
+                    "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=600&q=80"
+                ],
+                pdfUrl: "https://example.com/specs/insulation-board.pdf",
+                techSpecs: [
+                    { category: "基本参数", name: "规格尺寸", value: "1200×600×50", unit: "mm", standard: "GB/T 10801.1-2002" },
+                    { category: "基本参数", name: "密度", value: "≥30", unit: "kg/m³", standard: "GB/T 6343-2009" },
+                    { category: "热工性能", name: "导热系数", value: "≤0.030", unit: "W/(m·K)", standard: "GB/T 10294-2008" },
+                    { category: "热工性能", name: "蓄热系数", value: "≥0.36", unit: "W/(m²·K)", standard: "GB/T 10294-2008" },
+                    { category: "力学性能", name: "抗压强度", value: "≥150", unit: "kPa", standard: "GB/T 8813-2008" },
+                    { category: "力学性能", name: "抗拉强度", value: "≥100", unit: "kPa", standard: "GB/T 9641-1988" },
+                    { category: "防火性能", name: "燃烧性能等级", value: "A级", unit: "", standard: "GB 8624-2012" },
+                    { category: "防火性能", name: "烟密度等级", value: "≤15", unit: "", standard: "GB/T 8627-2007" },
+                    { category: "耐候性能", name: "尺寸稳定性", value: "≤0.5", unit: "%", standard: "GB/T 8811-2008" },
+                    { category: "耐候性能", name: "耐冻融性", value: "30次无异常", unit: "", standard: "JG 149-2003" }
+                ]
+            },
+            {
+                id: 7,
+                name: "屋面防水卷材",
+                category: "roof",
+                spec: "1.5mm厚",
+                price: 48,
+                stock: 3000,
+                unit: "㎡",
+                desc: "SBS改性沥青防水卷材，耐候性强，使用寿命长达20年。",
+                images: [
+                    "https://images.unsplash.com/photo-1593697821091-9c1d9d1c5c8f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=600&q=80"
+                ],
+                pdfUrl: "https://example.com/specs/waterproof-membrane.pdf",
+                techSpecs: [
+                    { category: "基本参数", name: "厚度", value: "1.5-4.0", unit: "mm", standard: "GB 18242-2008" },
+                    { category: "基本参数", name: "宽度", value: "1000", unit: "mm", standard: "GB 18242-2008" },
+                    { category: "物理性能", name: "拉力", value: "≥800", unit: "N/50mm", standard: "GB/T 328.8-2007" },
+                    { category: "物理性能", name: "延伸率", value: "≥40", unit: "%", standard: "GB/T 328.8-2007" },
+                    { category: "物理性能", name: "撕裂强度", value: "≥50", unit: "N", standard: "GB/T 328.18-2007" },
+                    { category: "热工性能", name: "耐热度", value: "≥90", unit: "℃", standard: "GB/T 328.11-2007" },
+                    { category: "热工性能", name: "低温柔性", value: "-25", unit: "℃", standard: "GB/T 328.14-2007" },
+                    { category: "耐候性能", name: "人工气候老化", value: "≥2500", unit: "小时", standard: "GB/T 18244-2000" },
+                    { category: "耐候性能", name: "耐根穿刺性", value: "通过", unit: "", standard: "JC/T 1075-2008" },
+                    { category: "防水性能", name: "不透水性", value: "0.3MPa, 30min", unit: "不透水", standard: "GB/T 328.10-2007" }
+                ]
+            },
+            {
+                id: 8,
+                name: "预应力管桩",
+                category: "foundation",
+                spec: "PHC-A8 500(100)",
+                price: 4800,
+                stock: 200,
+                unit: "吨",
+                desc: "高强度预应力混凝土管桩，适用于高层建筑地基处理。",
+                images: [
+                    "https://images.unsplash.com/photo-1560518883-ce09059eeffa?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=600&q=80"
+                ],
+                pdfUrl: "https://example.com/specs/prestressed-pile.pdf",
+                techSpecs: [
+                    { category: "基本参数", name: "规格型号", value: "PHC-A8 500(100)", unit: "", standard: "GB 13476-2009" },
+                    { category: "基本参数", name: "外径", value: "500", unit: "mm", standard: "GB 13476-2009" },
+                    { category: "基本参数", name: "壁厚", value: "100", unit: "mm", standard: "GB 13476-2009" },
+                    { category: "力学性能", name: "抗弯性能", value: "≥150", unit: "kN·m", standard: "GB 13476-2009" },
+                    { category: "力学性能", name: "抗裂弯矩", value: "≥120", unit: "kN·m", standard: "GB 13476-2009" },
+                    { category: "力学性能", name: "极限弯矩", value: "≥180", unit: "kN·m", standard: "GB 13476-2009" },
+                    { category: "混凝土性能", name: "混凝土强度等级", value: "C80", unit: "", standard: "GB/T 50081-2002" },
+                    { category: "混凝土性能", name: "保护层厚度", value: "≥40", unit: "mm", standard: "GB 50010-2010" },
+                    { category: "耐久性能", name: "抗渗等级", value: "P10", unit: "", standard: "GB/T 50082-2009" },
+                    { category: "耐久性能", name: "抗冻等级", value: "F200", unit: "", standard: "GB/T 50082-2009" }
+                ]
+            }
+            ];
+          
+        // 项目数据（模拟数据库）
+        let projects = [
+            { 
+                id: 1, 
+                name: "教堂项目", 
+                manager: "张工", 
+                startDate: "2023-05-01", 
+                endDate: "2024-02-28", 
+                type: "public",
+                materials: [
+                    { materialId: 1, quantity: 120 },
+                    { materialId: 3, quantity: 15 },
+                    { materialId: 5, quantity: 85 }
+                ]
+            },
+            { 
+                id: 2, 
+                name: "海滨别墅项目", 
+                manager: "李工", 
+                startDate: "2023-07-15", 
+                endDate: "2024-05-30", 
+                type: "residential",
+                materials: [
+                    { materialId: 2, quantity: 45 },
+                    { materialId: 4, quantity: 120 },
+                    { materialId: 6, quantity: 200 },
+                    { materialId: 8, quantity: 85 }
+                ]
+            }
+        ];
+
+        // 当前选中的项目ID
+        let currentProjectId = 2; // 默认选中海滨别墅项目
+
+        // DOM元素
+        const materialsGrid = document.getElementById('materialsGrid');
+        const materialModal = document.getElementById('materialModal');
+        const projectModal = document.getElementById('projectModal');
+        const manageProjectModal = document.getElementById('manageProjectModal');
+        const addMaterialBtn = document.getElementById('addMaterialBtn');
+        const newProjectBtn = document.getElementById('newProjectBtn');
+        const manageProjectBtn = document.getElementById('manageProjectBtn');
+        const cancelModalBtn = document.getElementById('cancelModalBtn');
+        const cancelProjectBtn = document.getElementById('cancelProjectBtn');
+        const saveMaterialBtn = document.getElementById('saveMaterialBtn');
+        const saveProjectBtn = document.getElementById('saveProjectBtn');
+        const modalTitle = document.getElementById('modalTitle');
+        const materialForm = document.getElementById('materialForm');
+        const projectForm = document.getElementById('projectForm');
+        const uploadArea = document.getElementById('uploadArea');
+        const materialImage = document.getElementById('materialImage');
+        const uploadedImages = document.getElementById('uploadedImages');
+        const searchInput = document.getElementById('searchInput');
+        const sortSelect = document.getElementById('sortSelect');
+        const projectSelect = document.getElementById('projectSelect');
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const materialCount = document.getElementById('materialCount');
+        const projectMaterialsList = document.getElementById('projectMaterialsList');
+        const addMaterialSelect = document.getElementById('addMaterialSelect');
+        const materialQuantity = document.getElementById('materialQuantity');
+        const confirmAddMaterialBtn = document.getElementById('confirmAddMaterialBtn');
+        const closeManageProjectBtn = document.getElementById('closeManageProjectBtn');
+        const updateProjectBtn = document.getElementById('updateProjectBtn');
+        const addMaterialToProjectBtn = document.getElementById('addMaterialToProjectBtn');
+        const currentProjectName = document.getElementById('currentProjectName');
+        const projectTotalBudget = document.getElementById('projectTotalBudget');
+        const budgetFileName = document.getElementById('budgetFileName');
+        const budgetUpdateDate = document.getElementById('budgetUpdateDate');
+        const downloadBudgetBtns = document.querySelectorAll('.download-budget-btn');
+        const materialUnit = document.getElementById('materialUnit');
+        const customUnit = document.getElementById('customUnit');
+        const downloadSpecsManualBtn = document.getElementById('downloadSpecsManualBtn');
+        const specsManualUpdateDate = document.getElementById('specsManualUpdateDate');
+        const addTechSpecBtn = document.getElementById('addTechSpecBtn');
+        const techSpecsTableBody = document.getElementById('techSpecsTableBody');
+        const techSpecForm = document.getElementById('techSpecForm');
+        const saveTechSpecBtn = document.getElementById('saveTechSpecBtn');
+        const cancelTechSpecBtn = document.getElementById('cancelTechSpecBtn');
+        const techSpecCategory = document.getElementById('techSpecCategory');
+        const techSpecName = document.getElementById('techSpecName');
+        const techSpecValue = document.getElementById('techSpecValue');
+        const techSpecUnit = document.getElementById('techSpecUnit');
+        const techSpecStandard = document.getElementById('techSpecStandard');
+        const editTechSpecIndex = document.getElementById('editTechSpecIndex');
+        
+        // 存储当前上传的图片
+        let currentUploadedImages = [];
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            renderMaterials(materials);
+            materialCount.textContent = materials.length;
+            renderProjectOptions();
+            updateBudgetFileName();
+            
+            // 更新技术手册日期
+            specsManualUpdateDate.textContent = new Date().toISOString().split('T')[0];
+            
+            // 设置事件监听器
+            setupEventListeners();
+        });
+        
+        // 渲染项目选项
+        function renderProjectOptions() {
+            projectSelect.innerHTML = '';
+            
+            projects.forEach(project => {
+                const option = document.createElement('option');
+                option.value = project.id;
+                option.textContent = project.name;
+                // 默认选中第二个项目
+                if (project.id === currentProjectId) {
+                    option.selected = true;
+                }
+                projectSelect.appendChild(option);
+            });
+        }
+        
+        // 更新预算表文件名
+        function updateBudgetFileName() {
+            const project = projects.find(p => p.id === currentProjectId);
+            if (project) {
+                budgetFileName.textContent = `${project.name}预算表`;
+                budgetUpdateDate.textContent = new Date().toISOString().split('T')[0];
+            }
+        }
+        
+        // 渲染材料列表
+        function renderMaterials(materialsArray) {
+            materialsGrid.innerHTML = '';
+            
+            if (materialsArray.length === 0) {
+                materialsGrid.innerHTML = `
+                    <div class="col-span-full text-center py-12">
+                        <i class="fas fa-box-open text-4xl text-gray-400 mb-4"></i>
+                        <h3 class="text-xl font-semibold text-gray-700">未找到材料</h3>
+                        <p class="text-gray-500 mt-2">请尝试其他搜索条件或添加新材料</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            materialsArray.forEach(material => {
+                const categoryClass = getCategoryClass(material.category);
+                const categoryName = getCategoryName(material.category);
+                const stockText = material.stock > 0 ? 
+                    `<span class="text-green-600">库存: ${material.stock}${material.unit}</span>` : 
+                    `<span class="text-red-600">需定制</span>`;
+                
+                const materialCard = document.createElement('div');
+                materialCard.className = 'material-card bg-white rounded-xl shadow-md overflow-hidden';
+                materialCard.innerHTML = `
+                    <div class="material-image-container">
+                        ${material.images && material.images.length > 0 ? 
+                            `<img src="${material.images[0]}" alt="${material.name}" class="material-image">` : 
+                            `<div class="no-image"><i class="fas fa-image"></i></div>`
+                        }
+                        ${material.images && material.images.length > 1 ? 
+                            `<div class="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded-lg">${material.images.length} 张图片</div>` : 
+                            ''
+                        }
+                        ${material.pdfUrl ? `
+                            <div class="absolute top-2 right-2 bg-white rounded-full p-2 shadow-md">
+                                <i class="fas fa-file-pdf text-red-600 text-lg"></i>
+                            </div>
+                        ` : ''}
+                    </div>
+                    <div class="p-5">
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <span class="category-badge ${categoryClass.class}">${categoryName}</span>
+                                <h3 class="text-xl font-bold text-gray-900 mt-2">${material.name}</h3>
+                            </div>
+                            <div class="flex space-x-2">
+                                <button class="edit-btn action-btn text-blue-600 hover:text-blue-800" data-id="${material.id}">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="delete-btn action-btn text-red-600 hover:text-red-800" data-id="${material.id}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <p class="text-gray-600 mb-4">${material.desc}</p>
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <span class="text-sm text-gray-500">规格：</span>
+                                <span class="text-sm font-medium">${material.spec}</span>
+                            </div>
+                            <span class="text-lg font-bold text-primary">¥${material.price.toLocaleString()}${material.unit ? '/' + material.unit : ''}</span>
+                        </div>
+                    </div>
+                    <div class="bg-gray-100 p-4 flex items-center justify-between">
+                        <div class="flex items-center space-x-2 text-sm text-gray-600">
+                            <i class="fas fa-box"></i>
+                            ${stockText}
+                        </div>
+                        <button class="text-sm text-primary hover:underline view-detail-btn" data-id="${material.id}">查看详情</button>
+                    </div>
+                `;
+                materialsGrid.appendChild(materialCard);
+            });
+            
+            // 为动态生成的按钮添加事件监听器
+            document.querySelectorAll('.edit-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = e.currentTarget.getAttribute('data-id');
+                    editMaterial(id);
+                });
+            });
+            
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = e.currentTarget.getAttribute('data-id');
+                    deleteMaterial(id);
+                });
+            });
+            
+            document.querySelectorAll('.view-detail-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = e.currentTarget.getAttribute('data-id');
+                    viewMaterialDetail(id);
+                });
+            });
+        }
+        
+        // 获取分类信息
+        function getCategoryClass(category) {
+            const classes = {
+                roof: { class: "bg-blue-100 text-blue-800", name: "屋面系统" },
+                wall: { class: "bg-green-100 text-green-800", name: "外墙系统" },
+                window: { class: "bg-purple-100 text-purple-800", name: "门窗系统" },
+                structure: { class: "bg-yellow-100 text-yellow-800", name: "主体结构" },
+                interior: { class: "bg-pink-100 text-pink-800", name: "室内装修" },
+                equipment: { class: "bg-teal-100 text-teal-800", name: "设备系统" },
+                foundation: { class: "bg-indigo-100 text-indigo-800", name: "基础工程" }
+            };
+            return classes[category] || { class: "bg-gray-100 text-gray-800", name: "其他" };
+        }
+        
+        function getCategoryName(category) {
+            return getCategoryClass(category).name;
+        }
+        
+        // 渲染项目材料列表
+        function renderProjectMaterials() {
+            const project = projects.find(p => p.id === currentProjectId);
+            if (!project) return;
+            
+            projectMaterialsList.innerHTML = '';
+            let totalBudget = 0;
+            
+            if (project.materials.length === 0) {
+                projectMaterialsList.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="text-center py-8 text-gray-500">
+                            <i class="fas fa-inbox text-3xl mb-2"></i>
+                            <p>该项目尚未添加任何材料</p>
+                        </td>
+                    </tr>
+                `;
+                projectTotalBudget.textContent = "¥0.00";
+                return;
+            }
+            
+            project.materials.forEach(item => {
+                const material = materials.find(m => m.id === item.materialId);
+                if (!material) return;
+                
+                const subtotal = material.price * item.quantity;
+                totalBudget += subtotal;
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${material.name}</td>
+                    <td>${material.spec}</td>
+                    <td>${getCategoryName(material.category)}</td>
+                    <td>¥${material.price.toLocaleString()}/${material.unit}</td>
+                    <td>
+                        <input type="number" min="1" value="${item.quantity}" 
+                            class="material-quantity-input material-quantity px-2 py-1 border border-gray-300 rounded-lg" 
+                            data-material-id="${material.id}">
+                    </td>
+                    <td>¥${subtotal.toLocaleString()}</td>
+                    <td>
+                        <button class="remove-material-btn text-red-600 hover:text-red-800" data-material-id="${material.id}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                projectMaterialsList.appendChild(row);
+            });
+            
+            // 添加总计行
+            projectTotalBudget.textContent = `¥${totalBudget.toLocaleString()}`;
+            
+            // 为数量输入框添加事件监听器
+            document.querySelectorAll('.material-quantity-input').forEach(input => {
+                input.addEventListener('change', (e) => {
+                    const materialId = parseInt(e.target.getAttribute('data-material-id'));
+                    const newQuantity = parseInt(e.target.value);
+                    updateMaterialQuantity(materialId, newQuantity);
+                });
+            });
+            
+            // 为删除按钮添加事件监听器
+            document.querySelectorAll('.remove-material-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const materialId = parseInt(e.currentTarget.getAttribute('data-material-id'));
+                    removeMaterialFromProject(materialId);
+                });
+            });
+        }
+        
+        // 更新材料数量
+        function updateMaterialQuantity(materialId, quantity) {
+            const project = projects.find(p => p.id === currentProjectId);
+            if (!project) return;
+            
+            const materialItem = project.materials.find(item => item.materialId === materialId);
+            if (materialItem) {
+                materialItem.quantity = quantity;
+                renderProjectMaterials();
+                showNotification('材料数量已更新');
+            }
+        }
+        
+        // 从项目中移除材料
+        function removeMaterialFromProject(materialId) {
+            const project = projects.find(p => p.id === currentProjectId);
+            if (!project) return;
+            
+            project.materials = project.materials.filter(item => item.materialId !== materialId);
+            renderProjectMaterials();
+            showNotification('材料已从项目中移除');
+        }
+        
+        // 渲染添加材料下拉框
+        function renderAddMaterialSelect() {
+            addMaterialSelect.innerHTML = '<option value="">请选择材料</option>';
+            
+            const project = projects.find(p => p.id === currentProjectId);
+            if (!project) return;
+            
+            // 获取尚未添加到项目的材料
+            const projectMaterialIds = project.materials.map(item => item.materialId);
+            const availableMaterials = materials.filter(m => !projectMaterialIds.includes(m.id));
+            
+            availableMaterials.forEach(material => {
+                const option = document.createElement('option');
+                option.value = material.id;
+                option.textContent = `${material.name} (${material.unit})`;
+                addMaterialSelect.appendChild(option);
+            });
+        }
+        
+        // 渲染技术参数表格
+        function renderTechSpecsTable(specs) {
+            techSpecsTableBody.innerHTML = '';
+            
+            if (!specs || specs.length === 0) {
+                techSpecsTableBody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center py-4 text-gray-500">
+                            暂无技术参数数据
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            specs.forEach((spec, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${spec.category}</td>
+                    <td>${spec.name}</td>
+                    <td>${spec.value}</td>
+                    <td>${spec.unit}</td>
+                    <td>${spec.standard}</td>
+                    <td class="flex gap-2">
+                        <button class="edit-spec-btn spec-action-btn" data-index="${index}">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="delete-spec-btn spec-action-btn" data-index="${index}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                techSpecsTableBody.appendChild(row);
+            });
+            
+            // 为编辑按钮添加事件监听器
+            document.querySelectorAll('.edit-spec-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    // 阻止事件冒泡
+                    e.stopPropagation();
+                    e.preventDefault();
+                    
+                    const index = parseInt(e.currentTarget.getAttribute('data-index'));
+                    editTechSpec(index);
+                });
+            });
+            
+            // 为删除按钮添加事件监听器
+            document.querySelectorAll('.delete-spec-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    // 阻止事件冒泡
+                    e.stopPropagation();
+                    e.preventDefault();
+                    
+                    const index = parseInt(e.currentTarget.getAttribute('data-index'));
+                    deleteTechSpec(index);
+                });
+            });
+        }
+        
+        // 编辑技术参数
+        function editTechSpec(index) {
+            const materialId = document.getElementById('editMaterialId').value;
+            if (!materialId) return;
+            
+            const material = materials.find(m => m.id == materialId);
+            if (!material || !material.techSpecs || index >= material.techSpecs.length) return;
+            
+            const spec = material.techSpecs[index];
+            
+            // 填充表单
+            techSpecCategory.value = spec.category;
+            techSpecName.value = spec.name;
+            techSpecValue.value = spec.value;
+            techSpecUnit.value = spec.unit;
+            techSpecStandard.value = spec.standard;
+            
+            // 设置编辑索引
+            editTechSpecIndex.value = index;
+            
+            // 显示表单
+            techSpecForm.classList.remove('hidden');
+            
+            // 高亮当前编辑行
+            const rows = techSpecsTableBody.querySelectorAll('tr');
+            rows.forEach(row => row.classList.remove('editing-spec'));
+            if (rows[index]) {
+                rows[index].classList.add('editing-spec');
+            }
+        }
+        
+        // 删除技术参数
+        function deleteTechSpec(index) {
+            const materialId = document.getElementById('editMaterialId').value;
+            if (!materialId) return;
+            
+            const material = materials.find(m => m.id == materialId);
+            if (!material || !material.techSpecs || index >= material.techSpecs.length) return;
+            
+            if (confirm('确定要删除此技术参数吗？')) {
+                material.techSpecs.splice(index, 1);
+                renderTechSpecsTable(material.techSpecs);
+                showNotification('技术参数已删除');
+            }
+        }
+        
+        // 保存技术参数
+        function saveTechSpec() {
+            const materialId = document.getElementById('editMaterialId').value;
+            if (!materialId) return;
+            
+            const material = materials.find(m => m.id == materialId);
+            if (!material) return;
+            
+            const category = techSpecCategory.value.trim();
+            const name = techSpecName.value.trim();
+            const value = techSpecValue.value.trim();
+            const unit = techSpecUnit.value.trim();
+            const standard = techSpecStandard.value.trim();
+            
+            if (!category || !name || !value) {
+                alert('请填写参数类别、名称和值');
+                return;
+            }
+            
+            const spec = { category, name, value, unit, standard };
+            const index = parseInt(editTechSpecIndex.value);
+            
+            if (!material.techSpecs) {
+                material.techSpecs = [];
+            }
+            
+            if (index >= 0) {
+                // 更新现有参数
+                material.techSpecs[index] = spec;
+            } else {
+                // 添加新参数
+                material.techSpecs.push(spec);
+            }
+            
+            // 重新渲染表格
+            renderTechSpecsTable(material.techSpecs);
+            
+            // 重置表单和隐藏
+            resetTechSpecForm();
+            
+            showNotification(`技术参数已${index >= 0 ? '更新' : '添加'}`);
+        }
+        
+        // 重置技术参数表单
+        function resetTechSpecForm() {
+            techSpecCategory.value = '';
+            techSpecName.value = '';
+            techSpecValue.value = '';
+            techSpecUnit.value = '';
+            techSpecStandard.value = '';
+            editTechSpecIndex.value = '-1';
+            techSpecForm.classList.add('hidden');
+            
+            // 移除行高亮
+            const rows = techSpecsTableBody.querySelectorAll('tr');
+            rows.forEach(row => row.classList.remove('editing-spec'));
+        }
+        
+        // 设置事件监听器
+        function setupEventListeners() {
+            // 添加材料按钮
+            addMaterialBtn.addEventListener('click', () => {
+                modalTitle.textContent = '添加新材料';
+                materialForm.reset();
+                document.getElementById('editMaterialId').value = '';
+                currentUploadedImages = [];
+                renderUploadedImages();
+                resetTechSpecForm();
+                renderTechSpecsTable([]);
+                materialModal.classList.remove('hidden');
+            });
+            
+            // 新建项目按钮
+            newProjectBtn.addEventListener('click', () => {
+                projectForm.reset();
+                projectModal.classList.remove('hidden');
+            });
+            
+            // 管理项目按钮
+            manageProjectBtn.addEventListener('click', () => {
+                const project = projects.find(p => p.id === currentProjectId);
+                if (project) {
+                    currentProjectName.textContent = project.name;
+                    renderProjectMaterials();
+                    renderAddMaterialSelect();
+                    manageProjectModal.classList.remove('hidden');
+                }
+            });
+            
+            // 取消按钮（材料模态框）
+            cancelModalBtn.addEventListener('click', () => {
+                materialModal.classList.add('hidden');
+            });
+            
+            // 取消按钮（项目模态框）
+            cancelProjectBtn.addEventListener('click', () => {
+                projectModal.classList.add('hidden');
+            });
+            
+            // 关闭管理项目模态框
+            closeManageProjectBtn.addEventListener('click', () => {
+                manageProjectModal.classList.add('hidden');
+            });
+            
+            // 保存材料按钮
+            saveMaterialBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                
+                const id = document.getElementById('editMaterialId').value;
+                const name = document.getElementById('materialName').value;
+                const category = document.getElementById('materialCategory').value;
+                const spec = document.getElementById('materialSpec').value;
+                const price = parseFloat(document.getElementById('materialPrice').value);
+                const stock = parseInt(document.getElementById('materialStock').value) || 0;
+                const desc = document.getElementById('materialDesc').value;
+                const pdfUrl = document.getElementById('materialPdf').value;
+                let unit = document.getElementById('materialUnit').value;
+                
+                // 检查自定义单位
+                const customUnitValue = document.getElementById('customUnit').value.trim();
+                if (customUnitValue) {
+                    unit = customUnitValue;
+                }
+                
+                if (!name || !category || !spec || isNaN(price) || !unit) {
+                    alert('请填写必填字段（名称、分类、规格、单价、单位）');
+                    return;
+                }
+                
+                if (id) {
+                    // 更新现有材料
+                    const index = materials.findIndex(m => m.id == id);
+                    if (index !== -1) {
+                        materials[index] = {
+                            ...materials[index],
+                            name,
+                            category,
+                            spec,
+                            price,
+                            stock,
+                            desc,
+                            unit,
+                            pdfUrl,
+                            images: currentUploadedImages.length > 0 ? 
+                                currentUploadedImages : 
+                                materials[index].images
+                        };
+                    }
+                } else {
+                    // 添加新材料
+                    const newMaterial = {
+                        id: Date.now(), // 使用时间戳作为ID
+                        name,
+                        category,
+                        spec,
+                        price,
+                        stock,
+                        desc,
+                        unit,
+                        pdfUrl,
+                        images: currentUploadedImages,
+                        techSpecs: [] // 初始化为空数组
+                    };
+                    materials.push(newMaterial);
+                }
+                
+                renderMaterials(materials);
+                materialModal.classList.add('hidden');
+                materialCount.textContent = materials.length;
+                
+                // 显示成功消息
+                showNotification(`材料 "${name}" ${id ? '已更新' : '已添加'}成功！`);
+            });
+            
+            // 保存项目按钮
+            saveProjectBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                
+                const name = document.getElementById('projectName').value;
+                const description = document.getElementById('projectDescription').value;
+                const manager = document.getElementById('projectManager').value;
+                const startDate = document.getElementById('projectStartDate').value;
+                const endDate = document.getElementById('projectEndDate').value;
+                const type = document.getElementById('projectType').value;
+                
+                if (!name || !manager) {
+                    alert('请填写项目名称和负责人');
+                    return;
+                }
+                
+                // 添加新项目
+                const newProject = {
+                    id: Date.now(), // 使用时间戳作为ID
+                    name,
+                    description,
+                    manager,
+                    startDate,
+                    endDate,
+                    type,
+                    materials: [] // 初始化为空数组
+                };
+                
+                projects.push(newProject);
+                renderProjectOptions();
+                projectModal.classList.add('hidden');
+                
+                // 自动选择新创建的项目
+                projectSelect.value = newProject.id;
+                currentProjectId = newProject.id;
+                updateBudgetFileName();
+                
+                // 显示成功消息
+                showNotification(`项目 "${name}" 创建成功！`);
+            });
+            
+            // 图片上传区域
+            uploadArea.addEventListener('click', () => {
+                materialImage.click();
+            });
+            
+            materialImage.addEventListener('change', (e) => {
+                if (e.target.files && e.target.files.length > 0) {
+                    for (let i = 0; i < e.target.files.length; i++) {
+                        const file = e.target.files[i];
+                        const reader = new FileReader();
+                        
+                        reader.onload = (e) => {
+                            currentUploadedImages.push(e.target.result);
+                            renderUploadedImages();
+                        }
+                        
+                        reader.readAsDataURL(file);
+                    }
+                }
+            });
+            
+            // 搜索功能
+            searchInput.addEventListener('input', () => {
+                filterMaterials();
+            });
+            
+            // 排序功能
+            sortSelect.addEventListener('change', () => {
+                filterMaterials();
+            });
+            
+            // 选项卡切换
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+                    filterMaterials();
+                });
+            });
+            
+            // 项目选择变更
+            projectSelect.addEventListener('change', () => {
+                currentProjectId = parseInt(projectSelect.value);
+                updateBudgetFileName();
+            });
+            
+            // 添加材料到项目
+            confirmAddMaterialBtn.addEventListener('click', () => {
+                const materialId = parseInt(addMaterialSelect.value);
+                const quantity = parseInt(materialQuantity.value) || 1;
+                
+                if (!materialId) {
+                    alert('请选择要添加的材料');
+                    return;
+                }
+                
+                const project = projects.find(p => p.id === currentProjectId);
+                if (!project) return;
+                
+                // 检查是否已添加
+                const existing = project.materials.find(item => item.materialId === materialId);
+                if (existing) {
+                    alert('该材料已添加到项目中');
+                    return;
+                }
+                
+                // 添加到项目
+                project.materials.push({
+                    materialId,
+                    quantity
+                });
+                
+                renderProjectMaterials();
+                renderAddMaterialSelect();
+                materialQuantity.value = 1;
+                
+                showNotification('材料已添加到项目');
+            });
+            
+            // 更新项目
+            updateProjectBtn.addEventListener('click', () => {
+                manageProjectModal.classList.add('hidden');
+                showNotification('项目材料清单已更新');
+            });
+            
+            // 下载预算表
+            downloadBudgetBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    downloadProjectBudget();
+                });
+            });
+            
+            // 下载技术参数手册
+            downloadSpecsManualBtn.addEventListener('click', () => {
+                downloadMaterialSpecsManual();
+            });
+            
+            // 单位选择与自定义单位的交互
+            materialUnit.addEventListener('change', () => {
+                if (materialUnit.value === '') {
+                    customUnit.disabled = false;
+                    customUnit.placeholder = "输入单位（如：箱、袋等）";
+                } else {
+                    customUnit.disabled = true;
+                    customUnit.value = '';
+                }
+            });
+            
+            customUnit.addEventListener('input', () => {
+                if (customUnit.value) {
+                    materialUnit.value = '';
+                }
+            });
+            
+            // 添加技术参数按钮
+            addTechSpecBtn.addEventListener('click', () => {
+                // 重置表单
+                resetTechSpecForm();
+                // 显示表单
+                techSpecForm.classList.remove('hidden');
+            });
+            
+            // 保存技术参数按钮
+            saveTechSpecBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                saveTechSpec();
+            });
+            
+            // 取消技术参数编辑按钮
+            cancelTechSpecBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                resetTechSpecForm();
+            });
+        }
+        
+        // 渲染上传的图片
+        function renderUploadedImages() {
+            uploadedImages.innerHTML = '';
+            
+            if (currentUploadedImages.length === 0) {
+                return;
+            }
+            
+            currentUploadedImages.forEach((image, index) => {
+                const imageItem = document.createElement('div');
+                imageItem.className = 'image-preview-item';
+                imageItem.innerHTML = `
+                    <img src="${image}" alt="预览图片 ${index + 1}">
+                    <div class="delete-image-btn" data-index="${index}">
+                        <i class="fas fa-times"></i>
+                    </div>
+                `;
+                uploadedImages.appendChild(imageItem);
+            });
+            
+            // 添加删除事件
+            document.querySelectorAll('.delete-image-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const index = parseInt(e.currentTarget.getAttribute('data-index'));
+                    currentUploadedImages.splice(index, 1);
+                    renderUploadedImages();
+                });
+            });
+        }
+        
+        // 编辑材料
+        function editMaterial(id) {
+            const material = materials.find(m => m.id == id);
+            if (material) {
+                modalTitle.textContent = '编辑材料信息';
+                document.getElementById('materialName').value = material.name;
+                document.getElementById('materialCategory').value = material.category;
+                document.getElementById('materialSpec').value = material.spec;
+                document.getElementById('materialPrice').value = material.price;
+                document.getElementById('materialStock').value = material.stock || '';
+                document.getElementById('materialDesc').value = material.desc || '';
+                document.getElementById('materialPdf').value = material.pdfUrl || '';
+                document.getElementById('editMaterialId').value = material.id;
+                
+                // 设置单位
+                const unitSelect = document.getElementById('materialUnit');
+                const customUnit = document.getElementById('customUnit');
+                const predefinedUnits = Array.from(unitSelect.options).map(opt => opt.value);
+                
+                if (predefinedUnits.includes(material.unit)) {
+                    unitSelect.value = material.unit;
+                    customUnit.value = '';
+                    customUnit.disabled = true;
+                } else {
+                    unitSelect.value = '';
+                    customUnit.value = material.unit;
+                    customUnit.disabled = false;
+                }
+                
+                // 设置图片
+                currentUploadedImages = material.images ? [...material.images] : [];
+                renderUploadedImages();
+                
+                // 设置技术参数
+                renderTechSpecsTable(material.techSpecs || []);
+                resetTechSpecForm();
+                
+                materialModal.classList.remove('hidden');
+            }
+        }
+        
+        // 删除材料
+        function deleteMaterial(id) {
+            if (confirm('确定要删除此材料吗？此操作不可撤销。')) {
+                materials = materials.filter(m => m.id != id);
+                
+                // 从所有项目中移除该材料
+                projects.forEach(project => {
+                    project.materials = project.materials.filter(item => item.materialId != id);
+                });
+                
+                renderMaterials(materials);
+                materialCount.textContent = materials.length;
+                showNotification('材料已成功删除！');
+            }
+        }
+        
+        // 查看材料详情
+        function viewMaterialDetail(id) {
+            const material = materials.find(m => m.id == id);
+            if (material) {
+                const categoryInfo = getCategoryClass(material.category);
+                
+                // 创建详情弹窗
+                const detailModal = document.createElement('div');
+                detailModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50';
+                detailModal.innerHTML = `
+                    <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-auto">
+                        <div class="p-6 border-b border-gray-200 flex justify-between items-center">
+                            <h3 class="text-xl font-bold text-gray-900">${material.name}</h3>
+                            <div class="detail-actions">
+                                <button class="detail-edit-btn" data-id="${material.id}">
+                                    <i class="fas fa-edit"></i> 编辑
+                                </button>
+                                <button class="detail-delete-btn" data-id="${material.id}">
+                                    <i class="fas fa-trash"></i> 删除
+                                </button>
+                                <button id="closeDetailBtn" class="text-gray-400 hover:text-gray-600 ml-4">
+                                    <i class="fas fa-times text-xl"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="p-6">
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                <div>
+                                    <!-- 轮播图 -->
+                                    <div class="carousel-container">
+                                        ${material.images && material.images.length > 0 ? 
+                                            material.images.map((image, index) => `
+                                                <div class="carousel-slide ${index === 0 ? 'active' : ''}">
+                                                    <img src="${image}" alt="${material.name} 图片 ${index + 1}">
+                                                </div>
+                                            `).join('') : 
+                                            `<div class="carousel-slide active flex items-center justify-center">
+                                                <div class="no-image text-6xl text-gray-300">
+                                                    <i class="fas fa-image"></i>
+                                                </div>
+                                            </div>`
+                                        }
+                                        
+                                        ${material.images && material.images.length > 1 ? `
+                                            <div class="carousel-prev">
+                                                <i class="fas fa-chevron-left"></i>
+                                            </div>
+                                            <div class="carousel-next">
+                                                <i class="fas fa-chevron-right"></i>
+                                            </div>
+                                            <div class="carousel-controls">
+                                                <div class="carousel-dots">
+                                                    ${material.images.map((_, index) => `
+                                                        <div class="carousel-dot ${index === 0 ? 'active' : ''}" data-index="${index}"></div>
+                                                    `).join('')}
+                                                </div>
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="mb-6">
+                                        <span class="category-badge ${categoryInfo.class}">${categoryInfo.name}</span>
+                                        <span class="ml-2 text-sm text-gray-500">材料编号: MAT-${material.id.toString().padStart(4, '0')}</span>
+                                    </div>
+                                    <div class="space-y-4">
+                                        <div>
+                                            <h4 class="text-sm font-medium text-gray-500">规格参数</h4>
+                                            <p class="mt-1">${material.spec}</p>
+                                        </div>
+                                        <div>
+                                            <h4 class="text-sm font-medium text-gray-500">单价</h4>
+                                            <p class="mt-1 text-primary font-bold">¥${material.price.toLocaleString()}/${material.unit}</p>
+                                        </div>
+                                        <div>
+                                            <h4 class="text-sm font-medium text-gray-500">库存状态</h4>
+                                            <p class="mt-1">${material.stock > 0 ? 
+                                                `<span class="text-green-600">${material.stock}${material.unit} 可用</span>` : 
+                                                `<span class="text-red-600">需定制生产</span>`}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <h4 class="text-sm font-medium text-gray-500">描述</h4>
+                                            <p class="mt-1">${material.desc || '暂无详细描述'}</p>
+                                        </div>
+                                        ${material.pdfUrl ? `
+                                        <div>
+                                            <h4 class="text-sm font-medium text-gray-500">技术文档</h4>
+                                            <a href="${material.pdfUrl}" target="_blank" class="pdf-link">
+                                                <i class="fas fa-file-pdf"></i>
+                                                <span>查看材料技术参数手册</span>
+                                            </a>
+                                        </div>
+                                        ` : ''}
+                                    </div>
+                                    <div class="mt-8 flex space-x-3">
+                                        <button class="add-to-project-btn px-4 py-2 bg-primary hover:bg-blue-700 text-white rounded-lg flex items-center space-x-2" data-id="${material.id}">
+                                            <i class="fas fa-plus"></i>
+                                            <span>添加到项目</span>
+                                        </button>
+                                        <button class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 flex items-center space-x-2">
+                                            <i class="fas fa-print"></i>
+                                            <span>打印信息</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- 材料技术参数表格 -->
+                            <div class="mt-8">
+                                <h4 class="text-lg font-semibold mb-4">详细技术参数</h4>
+                                <table class="tech-specs-table">
+                                    <thead>
+                                        <tr>
+                                            <th>参数类别</th>
+                                            <th>参数名称</th>
+                                            <th>参数值</th>
+                                            <th>单位</th>
+                                            <th>标准</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${material.techSpecs && material.techSpecs.length > 0 ? 
+                                            material.techSpecs.map((spec, index) => {
+                                                // 如果是新类别，添加分类行
+                                                const categoryRow = index === 0 || material.techSpecs[index-1].category !== spec.category ? 
+                                                    `<tr class="spec-category">
+                                                        <td colspan="5">${spec.category}</td>
+                                                    </tr>` : '';
+                                                
+                                                return `
+                                                    ${categoryRow}
+                                                    <tr>
+                                                        <td></td>
+                                                        <td>${spec.name}</td>
+                                                        <td class="spec-value">${spec.value}</td>
+                                                        <td><span class="spec-unit">${spec.unit}</span></td>
+                                                        <td><span class="standard-badge">${spec.standard}</span></td>
+                                                    </tr>
+                                                `;
+                                            }).join('') : 
+                                            `<tr>
+                                                <td colspan="5" class="text-center py-4 text-gray-500">暂无技术参数数据</td>
+                                            </tr>`
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                document.body.appendChild(detailModal);
+                
+                // 添加关闭事件
+                document.getElementById('closeDetailBtn').addEventListener('click', () => {
+                    detailModal.remove();
+                });
+                
+                // 添加编辑按钮事件
+                detailModal.querySelector('.detail-edit-btn').addEventListener('click', (e) => {
+                    const id = e.currentTarget.getAttribute('data-id');
+                    detailModal.remove();
+                    editMaterial(id);
+                });
+                
+                // 添加删除按钮事件
+                detailModal.querySelector('.detail-delete-btn').addEventListener('click', (e) => {
+                    const id = e.currentTarget.getAttribute('data-id');
+                    detailModal.remove();
+                    deleteMaterial(id);
+                });
+                
+                // 添加"添加到项目"按钮事件
+                detailModal.querySelector('.add-to-project-btn').addEventListener('click', (e) => {
+                    const materialId = parseInt(e.currentTarget.getAttribute('data-id'));
+                    addMaterialToProject(materialId);
+                    detailModal.remove();
+                });
+                
+                // 如果有多张图片，添加轮播控制
+                if (material.images && material.images.length > 1) {
+                    const slides = detailModal.querySelectorAll('.carousel-slide');
+                    const dots = detailModal.querySelectorAll('.carousel-dot');
+                    let currentSlide = 0;
+                    
+                    // 上一张
+                    detailModal.querySelector('.carousel-prev').addEventListener('click', () => {
+                        slides[currentSlide].classList.remove('active');
+                        dots[currentSlide].classList.remove('active');
+                        
+                        currentSlide = (currentSlide - 1 + slides.length) % slides.length;
+                        
+                        slides[currentSlide].classList.add('active');
+                        dots[currentSlide].classList.add('active');
+                    });
+                    
+                    // 下一张
+                    detailModal.querySelector('.carousel-next').addEventListener('click', () => {
+                        slides[currentSlide].classList.remove('active');
+                        dots[currentSlide].classList.remove('active');
+                        
+                        currentSlide = (currentSlide + 1) % slides.length;
+                        
+                        slides[currentSlide].classList.add('active');
+                        dots[currentSlide].classList.add('active');
+                    });
+                    
+                    // 点选导航
+                    dots.forEach((dot, index) => {
+                        dot.addEventListener('click', () => {
+                            slides[currentSlide].classList.remove('active');
+                            dots[currentSlide].classList.remove('active');
+                            
+                            currentSlide = index;
+                            
+                            slides[currentSlide].classList.add('active');
+                            dots[currentSlide].classList.add('active');
+                        });
+                    });
+                }
+            }
+        }
+        
+        // 添加材料到项目
+        function addMaterialToProject(materialId) {
+            const project = projects.find(p => p.id === currentProjectId);
+            if (!project) return;
+            
+            // 检查是否已添加
+            const existing = project.materials.find(item => item.materialId === materialId);
+            if (existing) {
+                showNotification('该材料已在项目中');
+                return;
+            }
+            
+            // 添加到项目
+            project.materials.push({
+                materialId,
+                quantity: 1
+            });
+            
+            // 打开管理项目模态框
+            currentProjectName.textContent = project.name;
+            renderProjectMaterials();
+            renderAddMaterialSelect();
+            manageProjectModal.classList.remove('hidden');
+            
+            showNotification('材料已添加到项目');
+        }
+        
+        // 筛选和排序材料
+        function filterMaterials() {
+            const searchTerm = searchInput.value.toLowerCase();
+            const sortValue = sortSelect.value;
+            const activeTab = document.querySelector('.tab-button.active');
+            const category = activeTab ? activeTab.getAttribute('data-category') : 'all';
+            
+            let filtered = materials.filter(material => {
+                const matchesSearch = material.name.toLowerCase().includes(searchTerm) || 
+                                    material.desc.toLowerCase().includes(searchTerm) ||
+                                    material.spec.toLowerCase().includes(searchTerm);
+                const matchesCategory = category === 'all' || material.category === category;
+                return matchesSearch && matchesCategory;
+            });
+            
+            // 排序
+            switch(sortValue) {
+                case 'price-asc':
+                    filtered.sort((a, b) => a.price - b.price);
+                    break;
+                case 'price-desc':
+                    filtered.sort((a, b) => b.price - a.price);
+                    break;
+                case 'name-asc':
+                    filtered.sort((a, b) => a.name.localeCompare(b.name));
+                    break;
+                case 'name-desc':
+                    filtered.sort((a, b) => b.name.localeCompare(a.name));
+                    break;
+                default:
+                    // 默认按ID排序
+                    filtered.sort((a, b) => a.id - b.id);
+            }
+            
+            renderMaterials(filtered);
+        }
+        
+        // 下载项目预算表
+        function downloadProjectBudget() {
+            const project = projects.find(p => p.id === currentProjectId);
+            if (!project) return;
+            
+            // 准备数据
+            const budgetData = [];
+            let totalBudget = 0;
+            
+            // 表头
+            budgetData.push(['项目材料预算表', '', '', '', '']);
+            budgetData.push(['项目名称:', project.name, '', '负责人:', project.manager]);
+            budgetData.push(['开始日期:', project.startDate, '', '结束日期:', project.endDate]);
+            budgetData.push([]);
+            budgetData.push(['序号', '材料名称', '规格', '单位', '单价', '数量', '小计']);
+            
+            // 材料行
+            project.materials.forEach((item, index) => {
+                const material = materials.find(m => m.id === item.materialId);
+                if (material) {
+                    const subtotal = material.price * item.quantity;
+                    totalBudget += subtotal;
+                    budgetData.push([
+                        index + 1,
+                        material.name,
+                        material.spec,
+                        material.unit,
+                        `¥${material.price.toLocaleString()}`,
+                        item.quantity,
+                        `¥${subtotal.toLocaleString()}`
+                    ]);
+                }
+            });
+            
+            // 总计行
+            budgetData.push([]);
+            budgetData.push(['', '', '', '', '', '总预算:', `¥${totalBudget.toLocaleString()}`]);
+            
+            // 创建工作簿
+            const ws = XLSX.utils.aoa_to_sheet(budgetData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "项目预算");
+            
+            // 生成Excel文件并下载
+            XLSX.writeFile(wb, `${project.name}预算表.xlsx`);
+            
+            // 更新文件日期
+            budgetUpdateDate.textContent = new Date().toISOString().split('T')[0];
+            showNotification('预算表已生成并下载');
+        }
+        
+        // 下载材料技术参数手册
+        function downloadMaterialSpecsManual() {
+            // 准备数据
+            const specsData = [];
+            
+            // 表头
+            specsData.push(['建筑材料技术参数手册', '', '', '', '']);
+            specsData.push(['生成日期:', new Date().toLocaleDateString(), '', '材料总数:', materials.length]);
+            specsData.push([]);
+            specsData.push(['材料ID', '材料名称', '分类', '规格', '单位', '技术参数']);
+            
+            // 材料行
+            materials.forEach(material => {
+                // 将技术参数转换为字符串
+                let specsString = '';
+                if (material.techSpecs && material.techSpecs.length > 0) {
+                    specsString = material.techSpecs.map(spec => 
+                        `${spec.name}: ${spec.value}${spec.unit} (${spec.standard})`
+                    ).join('; ');
+                } else {
+                    specsString = '暂无技术参数';
+                }
+                
+                specsData.push([
+                    material.id,
+                    material.name,
+                    getCategoryName(material.category),
+                    material.spec,
+                    material.unit,
+                    specsString
+                ]);
+            });
+            
+            // 创建工作簿
+            const ws = XLSX.utils.aoa_to_sheet(specsData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "技术参数手册");
+            
+            // 生成Excel文件并下载
+            XLSX.writeFile(wb, '建筑材料技术参数手册.xlsx');
+            
+            // 更新文件日期
+            specsManualUpdateDate.textContent = new Date().toISOString().split('T')[0];
+            showNotification('材料技术参数手册已生成并下载');
+        }
+        
+        // 显示通知
+        function showNotification(message) {
+            // 移除现有通知
+            const existing = document.getElementById('customNotification');
+            if (existing) existing.remove();
+            
+            const notification = document.createElement('div');
+            notification.id = 'customNotification';
+            notification.className = 'fixed bottom-6 right-6 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2 z-50 animate-fadeIn';
+            notification.innerHTML = `
+                <i class="fas fa-check-circle"></i>
+                <span>${message}</span>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // 3秒后移除通知
+            setTimeout(() => {
+                notification.classList.add('animate-fadeOut');
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
