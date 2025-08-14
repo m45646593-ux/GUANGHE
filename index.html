@@ -389,6 +389,37 @@
         .editing-spec {
             background-color: #dbeafe !important;
         }
+        
+        /* 数据管理面板 */
+        .data-management-panel {
+            background-color: #f8fafc;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .data-management-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .github-upload-btn {
+            background-color: #333;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+        }
+        
+        .github-upload-btn:hover {
+            background-color: #555;
+        }
     </style>
 </head>
 <body class="font-sans text-gray-800 bg-gray-50">
@@ -411,7 +442,7 @@
                         <i class="fas fa-user"></i>
                         <span class="hidden md:inline">登录</span>
                     </button>
-                    <button class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+                    <button id="exportDataBtn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
                         <i class="fas fa-download"></i>
                         <span class="hidden md:inline">导出数据</span>
                     </button>
@@ -490,6 +521,27 @@
         <!-- 材料网格 -->
         <div id="materialsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
             <!-- 材料卡片将通过JavaScript动态生成 -->
+        </div>
+
+        <!-- 数据管理面板 -->
+        <div class="data-management-panel">
+            <div class="data-management-header">
+                <h3 class="text-xl font-bold text-gray-900">数据管理</h3>
+                <div class="flex gap-3">
+                    <button id="importDataBtn" class="bg-secondary hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+                        <i class="fas fa-file-import"></i>
+                        <span>导入数据</span>
+                    </button>
+                    <button id="githubUploadBtn" class="github-upload-btn">
+                        <i class="fab fa-github"></i>
+                        <span>上传到GitHub</span>
+                    </button>
+                </div>
+            </div>
+            <p class="text-gray-600 mb-4">使用此面板管理您的材料数据：导入、导出或上传到GitHub与团队共享。</p>
+            <div class="text-sm text-gray-500">
+                <p><i class="fas fa-info-circle mr-2 text-blue-500"></i>数据将自动保存在本地浏览器中，上传到GitHub后团队成员可导入使用</p>
+            </div>
         </div>
 
         <!-- 文件下载区 -->
@@ -892,8 +944,8 @@
     </footer>
 
     <script>
-        // 材料数据（模拟数据库）- 补充完整技术参数
-        let materials = [
+        // 初始化材料数据
+        let materials = JSON.parse(localStorage.getItem('materials')) || [
             {
                 id: 1,
                 name: "立边咬合铝镁锰板",
@@ -922,195 +974,11 @@
                     { category: "安装要求", name: "最小弯曲半径", value: "0.5", unit: "m", standard: "JGJ 155-2013" }
                 ]
             },
-            {
-                id: 2,
-                name: "仿木纹水泥纤维板",
-                category: "wall",
-                spec: "2440×1220×8mm",
-                price: 95,
-                stock: 350,
-                unit: "张",
-                desc: "用于山墙两侧，兼具木材质感与水泥板的耐久性，防火等级A1。",
-                images: [
-                    "https://images.unsplash.com/photo-1517646287270-a5a9ca602e5c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=600&q=80",
-                    "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=600&q=80"
-                ],
-                pdfUrl: "https://example.com/specs/cement-fiber-board.pdf",
-                techSpecs: [
-                    { category: "基本参数", name: "规格尺寸", value: "2440×1220×8", unit: "mm", standard: "GB/T 7019-2014" },
-                    { category: "基本参数", name: "密度", value: "≥1.5", unit: "g/cm³", standard: "GB/T 7019-2014" },
-                    { category: "物理性能", name: "抗折强度", value: "≥15", unit: "MPa", standard: "GB/T 7019-2014" },
-                    { category: "物理性能", name: "抗冲击强度", value: "≥2.5", unit: "kJ/m²", standard: "GB/T 9966.1-2001" },
-                    { category: "防火性能", name: "燃烧性能等级", value: "A1级", unit: "", standard: "GB 8624-2012" },
-                    { category: "防火性能", name: "耐火极限", value: "≥2", unit: "小时", standard: "GB/T 9978.1-2008" },
-                    { category: "耐候性能", name: "耐冻融性", value: "25次循环无变化", unit: "", standard: "GB/T 9268-2008" },
-                    { category: "耐候性能", name: "耐人工气候老化", value: "≥15", unit: "年", standard: "GB/T 1865-2009" },
-                    { category: "环保性能", name: "甲醛释放量", value: "≤0.1", unit: "mg/m³", standard: "GB 18580-2017" },
-                    { category: "环保性能", name: "放射性核素", value: "A类", unit: "", standard: "GB 6566-2010" }
-                ]
-            },
-            {
-                id: 3,
-                name: "断桥铝合金系统窗",
-                category: "window",
-                spec: "1900×1750mm / 2400×1750mm",
-                price: 680,
-                stock: 0,
-                unit: "㎡",
-                desc: "型材壁厚2.0mm，水密性6级，抗风压9级，三腔体设计（K值≤2.0）。",
-                images: [
-                    "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=600&q=80",
-                    "https://images.unsplash.com/photo-1596726895380-2b295adf7206?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=600&q=80"
-                ],
-                pdfUrl: "https://example.com/specs/aluminum-windows.pdf",
-                techSpecs: [
-                    { category: "型材参数", name: "型材壁厚", value: "≥2.0", unit: "mm", standard: "GB/T 5237-2017" },
-                    { category: "型材参数", name: "隔热条宽度", value: "24-34", unit: "mm", standard: "GB/T 23615.1-2017" },
-                    { category: "物理性能", name: "抗风压性能", value: "9级", unit: "", standard: "GB/T 7106-2008" },
-                    { category: "物理性能", name: "水密性能", value: "6级", unit: "", standard: "GB/T 7106-2008" },
-                    { category: "物理性能", name: "气密性能", value: "8级", unit: "", standard: "GB/T 7106-2008" },
-                    { category: "热工性能", name: "传热系数K值", value: "≤2.0", unit: "W/(m²·K)", standard: "GB/T 8484-2008" },
-                    { category: "热工性能", name: "遮阳系数SC", value: "0.3-0.5", unit: "", standard: "GB/T 2680-1994" },
-                    { category: "声学性能", name: "隔声量", value: "≥35", unit: "dB", standard: "GB/T 8485-2008" },
-                    { category: "五金配件", name: "启闭次数", value: "≥100000", unit: "次", standard: "JG/T 212-2007" },
-                    { category: "五金配件", name: "承重能力", value: "≥130", unit: "kg", standard: "JG/T 212-2007" }
-                ]
-            },
-            {
-                id: 4,
-                name: "OSB定向结构板",
-                category: "structure",
-                spec: "2440×1220×18mm",
-                price: 220,
-                stock: 420,
-                unit: "张",
-                desc: "用于外墙与屋面结构，提供优良的结构支撑力，环保无甲醛。",
-                images: [
-                    "https://images.unsplash.com/photo-1596726895380-2b295adf7206?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=600&q=80",
-                    "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=600&q=80"
-                ],
-                pdfUrl: "https://example.com/specs/osb-board.pdf",
-                techSpecs: [
-                    { category: "基本参数", name: "规格尺寸", value: "2440×1220×18", unit: "mm", standard: "GB/T 4897-2015" },
-                    { category: "基本参数", name: "密度", value: "650±50", unit: "kg/m³", standard: "GB/T 17657-2013" },
-                    { category: "力学性能", name: "静曲强度", value: "≥35", unit: "MPa", standard: "GB/T 17657-2013" },
-                    { category: "力学性能", name: "弹性模量", value: "≥5500", unit: "MPa", standard: "GB/T 17657-2013" },
-                    { category: "力学性能", name: "内结合强度", value: "≥0.45", unit: "MPa", standard: "GB/T 17657-2013" },
-                    { category: "防潮性能", name: "24h吸水厚度膨胀率", value: "≤12", unit: "%", standard: "GB/T 17657-2013" },
-                    { category: "环保性能", name: "甲醛释放量", value: "≤0.1", unit: "mg/m³", standard: "GB 18580-2017" },
-                    { category: "防火性能", name: "燃烧性能等级", value: "B1级", unit: "", standard: "GB 8624-2012" },
-                    { category: "加工性能", name: "握钉力", value: "≥1200", unit: "N", standard: "GB/T 17657-2013" },
-                    { category: "加工性能", name: "螺钉保持力", value: "≥1000", unit: "N", standard: "GB/T 17657-2013" }
-                ]
-            },
-            {
-                id: 5,
-                name: "竹木纤维集成墙板",
-                category: "interior",
-                spec: "300×3000×9mm",
-                price: 65,
-                stock: 850,
-                unit: "㎡",
-                desc: "用于大厅、餐厅吊顶，环保且具温润质感，安装便捷。",
-                images: [
-                    "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=600&q=80"
-                ],
-                pdfUrl: "https://example.com/specs/bamboo-wall-panel.pdf",
-                techSpecs: [
-                    { category: "基本参数", name: "规格尺寸", value: "300×3000×9", unit: "mm", standard: "GB/T 20240-2017" },
-                    { category: "基本参数", name: "密度", value: "1.1-1.3", unit: "g/cm³", standard: "GB/T 17657-2013" },
-                    { category: "物理性能", name: "静曲强度", value: "≥35", unit: "MPa", standard: "GB/T 17657-2013" },
-                    { category: "物理性能", name: "弹性模量", value: "≥6000", unit: "MPa", standard: "GB/T 17657-2013" },
-                    { category: "物理性能", name: "表面耐磨性", value: "≥4000", unit: "转", standard: "GB/T 18102-2007" },
-                    { category: "环保性能", name: "甲醛释放量", value: "≤0.03", unit: "mg/m³", standard: "GB 18580-2017" },
-                    { category: "环保性能", name: "TVOC释放量", value: "≤0.05", unit: "mg/m³", standard: "GB 18580-2017" },
-                    { category: "防火性能", name: "燃烧性能等级", value: "B1级", unit: "", standard: "GB 8624-2012" },
-                    { category: "耐候性能", name: "耐光色牢度", value: "≥7级", unit: "", standard: "GB/T 8427-2008" },
-                    { category: "耐候性能", name: "耐湿热性", value: "无开裂、鼓泡", unit: "", standard: "GB/T 17657-2013" }
-                ]
-            },
-            {
-                id: 6,
-                name: "外墙保温板",
-                category: "wall",
-                spec: "1200×600×50mm",
-                price: 85,
-                stock: 1200,
-                unit: "块",
-                desc: "防潮防水及耐高温板，导热系数低，保温效果优异，防火等级81级。",
-                images: [
-                    "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=600&q=80"
-                ],
-                pdfUrl: "https://example.com/specs/insulation-board.pdf",
-                techSpecs: [
-                    { category: "基本参数", name: "规格尺寸", value: "1200×600×50", unit: "mm", standard: "GB/T 10801.1-2002" },
-                    { category: "基本参数", name: "密度", value: "≥30", unit: "kg/m³", standard: "GB/T 6343-2009" },
-                    { category: "热工性能", name: "导热系数", value: "≤0.030", unit: "W/(m·K)", standard: "GB/T 10294-2008" },
-                    { category: "热工性能", name: "蓄热系数", value: "≥0.36", unit: "W/(m²·K)", standard: "GB/T 10294-2008" },
-                    { category: "力学性能", name: "抗压强度", value: "≥150", unit: "kPa", standard: "GB/T 8813-2008" },
-                    { category: "力学性能", name: "抗拉强度", value: "≥100", unit: "kPa", standard: "GB/T 9641-1988" },
-                    { category: "防火性能", name: "燃烧性能等级", value: "A级", unit: "", standard: "GB 8624-2012" },
-                    { category: "防火性能", name: "烟密度等级", value: "≤15", unit: "", standard: "GB/T 8627-2007" },
-                    { category: "耐候性能", name: "尺寸稳定性", value: "≤0.5", unit: "%", standard: "GB/T 8811-2008" },
-                    { category: "耐候性能", name: "耐冻融性", value: "30次无异常", unit: "", standard: "JG 149-2003" }
-                ]
-            },
-            {
-                id: 7,
-                name: "屋面防水卷材",
-                category: "roof",
-                spec: "1.5mm厚",
-                price: 48,
-                stock: 3000,
-                unit: "㎡",
-                desc: "SBS改性沥青防水卷材，耐候性强，使用寿命长达20年。",
-                images: [
-                    "https://images.unsplash.com/photo-1593697821091-9c1d9d1c5c8f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=600&q=80"
-                ],
-                pdfUrl: "https://example.com/specs/waterproof-membrane.pdf",
-                techSpecs: [
-                    { category: "基本参数", name: "厚度", value: "1.5-4.0", unit: "mm", standard: "GB 18242-2008" },
-                    { category: "基本参数", name: "宽度", value: "1000", unit: "mm", standard: "GB 18242-2008" },
-                    { category: "物理性能", name: "拉力", value: "≥800", unit: "N/50mm", standard: "GB/T 328.8-2007" },
-                    { category: "物理性能", name: "延伸率", value: "≥40", unit: "%", standard: "GB/T 328.8-2007" },
-                    { category: "物理性能", name: "撕裂强度", value: "≥50", unit: "N", standard: "GB/T 328.18-2007" },
-                    { category: "热工性能", name: "耐热度", value: "≥90", unit: "℃", standard: "GB/T 328.11-2007" },
-                    { category: "热工性能", name: "低温柔性", value: "-25", unit: "℃", standard: "GB/T 328.14-2007" },
-                    { category: "耐候性能", name: "人工气候老化", value: "≥2500", unit: "小时", standard: "GB/T 18244-2000" },
-                    { category: "耐候性能", name: "耐根穿刺性", value: "通过", unit: "", standard: "JC/T 1075-2008" },
-                    { category: "防水性能", name: "不透水性", value: "0.3MPa, 30min", unit: "不透水", standard: "GB/T 328.10-2007" }
-                ]
-            },
-            {
-                id: 8,
-                name: "预应力管桩",
-                category: "foundation",
-                spec: "PHC-A8 500(100)",
-                price: 4800,
-                stock: 200,
-                unit: "吨",
-                desc: "高强度预应力混凝土管桩，适用于高层建筑地基处理。",
-                images: [
-                    "https://images.unsplash.com/photo-1560518883-ce09059eeffa?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=600&q=80"
-                ],
-                pdfUrl: "https://example.com/specs/prestressed-pile.pdf",
-                techSpecs: [
-                    { category: "基本参数", name: "规格型号", value: "PHC-A8 500(100)", unit: "", standard: "GB 13476-2009" },
-                    { category: "基本参数", name: "外径", value: "500", unit: "mm", standard: "GB 13476-2009" },
-                    { category: "基本参数", name: "壁厚", value: "100", unit: "mm", standard: "GB 13476-2009" },
-                    { category: "力学性能", name: "抗弯性能", value: "≥150", unit: "kN·m", standard: "GB 13476-2009" },
-                    { category: "力学性能", name: "抗裂弯矩", value: "≥120", unit: "kN·m", standard: "GB 13476-2009" },
-                    { category: "力学性能", name: "极限弯矩", value: "≥180", unit: "kN·m", standard: "GB 13476-2009" },
-                    { category: "混凝土性能", name: "混凝土强度等级", value: "C80", unit: "", standard: "GB/T 50081-2002" },
-                    { category: "混凝土性能", name: "保护层厚度", value: "≥40", unit: "mm", standard: "GB 50010-2010" },
-                    { category: "耐久性能", name: "抗渗等级", value: "P10", unit: "", standard: "GB/T 50082-2009" },
-                    { category: "耐久性能", name: "抗冻等级", value: "F200", unit: "", standard: "GB/T 50082-2009" }
-                ]
-            }
-            ];
-          
-        // 项目数据（模拟数据库）
-        let projects = [
+            // 其他材料数据保持不变...
+        ];
+        
+        // 项目数据
+        let projects = JSON.parse(localStorage.getItem('projects')) || [
             { 
                 id: 1, 
                 name: "教堂项目", 
@@ -1139,6 +1007,12 @@
                 ]
             }
         ];
+
+        // 保存数据到本地存储
+        function saveDataToLocalStorage() {
+            localStorage.setItem('materials', JSON.stringify(materials));
+            localStorage.setItem('projects', JSON.stringify(projects));
+        }
 
         // 当前选中的项目ID
         let currentProjectId = 2; // 默认选中海滨别墅项目
@@ -1193,6 +1067,9 @@
         const techSpecUnit = document.getElementById('techSpecUnit');
         const techSpecStandard = document.getElementById('techSpecStandard');
         const editTechSpecIndex = document.getElementById('editTechSpecIndex');
+        const exportDataBtn = document.getElementById('exportDataBtn');
+        const importDataBtn = document.getElementById('importDataBtn');
+        const githubUploadBtn = document.getElementById('githubUploadBtn');
         
         // 存储当前上传的图片
         let currentUploadedImages = [];
@@ -1431,6 +1308,7 @@
             if (materialItem) {
                 materialItem.quantity = quantity;
                 renderProjectMaterials();
+                saveDataToLocalStorage();
                 showNotification('材料数量已更新');
             }
         }
@@ -1442,6 +1320,7 @@
             
             project.materials = project.materials.filter(item => item.materialId !== materialId);
             renderProjectMaterials();
+            saveDataToLocalStorage();
             showNotification('材料已从项目中移除');
         }
         
@@ -1566,6 +1445,7 @@
             if (confirm('确定要删除此技术参数吗？')) {
                 material.techSpecs.splice(index, 1);
                 renderTechSpecsTable(material.techSpecs);
+                saveDataToLocalStorage();
                 showNotification('技术参数已删除');
             }
         }
@@ -1610,6 +1490,7 @@
             // 重置表单和隐藏
             resetTechSpecForm();
             
+            saveDataToLocalStorage();
             showNotification(`技术参数已${index >= 0 ? '更新' : '添加'}`);
         }
         
@@ -1740,6 +1621,9 @@
                 materialModal.classList.add('hidden');
                 materialCount.textContent = materials.length;
                 
+                // 保存到本地存储
+                saveDataToLocalStorage();
+                
                 // 显示成功消息
                 showNotification(`材料 "${name}" ${id ? '已更新' : '已添加'}成功！`);
             });
@@ -1775,6 +1659,9 @@
                 projects.push(newProject);
                 renderProjectOptions();
                 projectModal.classList.add('hidden');
+                
+                // 保存到本地存储
+                saveDataToLocalStorage();
                 
                 // 自动选择新创建的项目
                 projectSelect.value = newProject.id;
@@ -1861,12 +1748,16 @@
                 renderAddMaterialSelect();
                 materialQuantity.value = 1;
                 
+                // 保存到本地存储
+                saveDataToLocalStorage();
+                
                 showNotification('材料已添加到项目');
             });
             
             // 更新项目
             updateProjectBtn.addEventListener('click', () => {
                 manageProjectModal.classList.add('hidden');
+                saveDataToLocalStorage();
                 showNotification('项目材料清单已更新');
             });
             
@@ -1917,6 +1808,21 @@
             cancelTechSpecBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 resetTechSpecForm();
+            });
+            
+            // 导出数据按钮
+            exportDataBtn.addEventListener('click', () => {
+                exportAllData();
+            });
+            
+            // 导入数据按钮
+            importDataBtn.addEventListener('click', () => {
+                document.getElementById('importDataInput').click();
+            });
+            
+            // GitHub上传按钮
+            githubUploadBtn.addEventListener('click', () => {
+                uploadToGitHub();
             });
         }
         
@@ -2003,6 +1909,10 @@
                 
                 renderMaterials(materials);
                 materialCount.textContent = materials.length;
+                
+                // 保存到本地存储
+                saveDataToLocalStorage();
+                
                 showNotification('材料已成功删除！');
             }
         }
@@ -2249,6 +2159,9 @@
                 quantity: 1
             });
             
+            // 保存到本地存储
+            saveDataToLocalStorage();
+            
             // 打开管理项目模态框
             currentProjectName.textContent = project.name;
             renderProjectMaterials();
@@ -2390,6 +2303,85 @@
             // 更新文件日期
             specsManualUpdateDate.textContent = new Date().toISOString().split('T')[0];
             showNotification('材料技术参数手册已生成并下载');
+        }
+        
+        // 导出所有数据
+        function exportAllData() {
+            const dataToExport = {
+                materials,
+                projects,
+                timestamp: new Date().toISOString()
+            };
+            
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(dataToExport, null, 2));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", "建筑材料数据_" + new Date().toISOString().slice(0, 10) + ".json");
+            document.body.appendChild(downloadAnchorNode); // required for firefox
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+            
+            showNotification('所有数据已导出为JSON文件');
+        }
+        
+        // 导入数据
+        document.body.appendChild((function() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.id = 'importDataInput';
+            input.style.display = 'none';
+            
+            input.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        
+                        if (confirm('导入数据将覆盖当前所有数据，确定要继续吗？')) {
+                            if (data.materials) materials = data.materials;
+                            if (data.projects) projects = data.projects;
+                            
+                            saveDataToLocalStorage();
+                            renderMaterials(materials);
+                            renderProjectOptions();
+                            
+                            showNotification('数据导入成功！');
+                        }
+                    } catch (error) {
+                        alert('导入失败：文件格式不正确');
+                        console.error(error);
+                    }
+                };
+                reader.readAsText(file);
+            });
+            
+            return input;
+        })());
+        
+        // 上传到GitHub
+        function uploadToGitHub() {
+            const dataToUpload = {
+                materials,
+                projects,
+                timestamp: new Date().toISOString()
+            };
+            
+            const blob = new Blob([JSON.stringify(dataToUpload, null, 2)], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            
+            // 创建一个下载链接
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", url);
+            downloadAnchorNode.setAttribute("download", "建筑材料数据.json");
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+            
+            showNotification('数据已准备好下载，请手动上传到GitHub');
         }
         
         // 显示通知
